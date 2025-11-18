@@ -2,9 +2,9 @@ import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
 
 const colors = {
-  standard: "#ff9900",
-  hypoxia: "#a56cc1",
-  cold: "#4ab8a1"
+  standard: "#d95f02",
+  hypoxia: "#7570b3",
+  cold: "#1b9e77"
 };
 
 export default function WingDiscVsD() {
