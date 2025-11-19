@@ -1,8 +1,12 @@
 import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
+import ProfileLinePlot from "./ProfileLinePlot";
 
-// Import CSV file
+// Import CSV files
 import normVgHypoNormoCSV from "../data/norm_vghypo-normo.csv";
+import profilesVgNormoxiaCSV from "../data/Profiles_Vg_normoxia.csv";
+import profilesVgHypoxiaCSV from "../data/Profiles_Vg_hypoxia.csv";
+import profilesVg17CCSV from "../data/Profiles_Vg_17C.csv";
 
 const colors = {
   Normoxia: "#ff9900",
@@ -13,6 +17,14 @@ const colors = {
 export default function WingDiscVsD() {
   const svgRef = useRef();
   const [scatterData, setScatterData] = useState([]);
+  const [profileData, setProfileData] = useState({
+    normoxia: [],
+    hypoxia: [],
+    lowTemp: []
+  });
+  const [selectedDisc, setSelectedDisc] = useState(null);
+  const [selectedDiscInfo, setSelectedDiscInfo] = useState(null);
+  const [selectedDiscProfile, setSelectedDiscProfile] = useState([]);
   const [visibleConditions, setVisibleConditions] = useState({
     Normoxia: true,
     Hypoxia: true
@@ -20,7 +32,12 @@ export default function WingDiscVsD() {
 
   // Load data
   useEffect(() => {
-    d3.csv(normVgHypoNormoCSV).then((paramsData) => {
+    Promise.all([
+      d3.csv(normVgHypoNormoCSV),
+      d3.csv(profilesVgNormoxiaCSV),
+      d3.csv(profilesVgHypoxiaCSV),
+      d3.csv(profilesVg17CCSV)
+    ]).then(([paramsData, normoxiaProfiles, hypoxiaProfiles, lowTempProfiles]) => {
       // Process scatter data
       const processed = paramsData.map(d => ({
         disc: d.disc,
@@ -50,6 +67,22 @@ export default function WingDiscVsD() {
       console.log("Normalized area range:", d3.extent(processed, d => d.normalizedArea));
       
       setScatterData(processed);
+
+      // Process profile data
+      const processProfiles = (data) => {
+        return data.map(d => ({
+          disc: d.disc,
+          distance: +d.distance,
+          value: +d.value,
+          area: +d.area
+        }));
+      };
+
+      setProfileData({
+        normoxia: processProfiles(normoxiaProfiles),
+        hypoxia: processProfiles(hypoxiaProfiles),
+        lowTemp: processProfiles(lowTempProfiles)
+      });
     }).catch(err => console.error("Error loading data:", err));
   }, []);
 
@@ -166,9 +199,29 @@ export default function WingDiscVsD() {
       .attr("cy", d => yScale(d.D))
       .attr("r", 4)
       .attr("fill", d => colors[d.condition])
-      .attr("opacity", 0.7)
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1);
+      .attr("opacity", d => selectedDisc === d.disc ? 1 : 0.7)
+      .attr("stroke", d => selectedDisc === d.disc ? "#000" : "#fff")
+      .attr("stroke-width", d => selectedDisc === d.disc ? 2 : 1)
+      .style("cursor", "pointer")
+      .on("click", function(event, d) {
+        if (d.disc === selectedDisc) {
+          setSelectedDisc(null);
+          setSelectedDiscInfo(null);
+          setSelectedDiscProfile([]);
+        } else {
+          setSelectedDisc(d.disc);
+        }
+      })
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("r", 6)
+          .attr("stroke-width", 2);
+      })
+      .on("mouseout", function(event, d) {
+        d3.select(this)
+          .attr("r", 4)
+          .attr("stroke-width", d.disc === selectedDisc ? 2 : 1);
+      });
 
     // Top histogram
     Object.entries(colors).forEach(([condition, color]) => {
@@ -282,7 +335,30 @@ export default function WingDiscVsD() {
     });
 
 
-  }, [scatterData, visibleConditions]);
+  }, [scatterData, visibleConditions, selectedDisc]);
+
+  // Prepare profile data when disc is selected
+  useEffect(() => {
+    if (!selectedDisc || profileData.normoxia.length === 0) {
+      setSelectedDiscInfo(null);
+      setSelectedDiscProfile([]);
+      return;
+    }
+
+    // Find which condition this disc belongs to
+    const discInfo = scatterData.find(d => d.disc === selectedDisc);
+    if (!discInfo) return;
+
+    const conditionKey = discInfo.condition === "Normoxia" ? "normoxia" : 
+                         discInfo.condition === "Hypoxia" ? "hypoxia" : "lowTemp";
+    
+    // Get profile data for this disc
+    const discProfile = profileData[conditionKey].filter(d => d.disc === selectedDisc);
+    
+    setSelectedDiscInfo(discInfo);
+    setSelectedDiscProfile(discProfile);
+
+  }, [selectedDisc, profileData, scatterData]);
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#fff" }}>
@@ -292,6 +368,15 @@ export default function WingDiscVsD() {
         <div style={{ textAlign: "center", marginTop: "20px", color: "#666" }}>
           Loading data...
         </div>
+      )}
+
+      {selectedDisc && selectedDiscInfo && selectedDiscProfile.length > 0 && (
+        <ProfileLinePlot 
+          selectedDisc={selectedDisc}
+          discInfo={selectedDiscInfo}
+          discProfile={selectedDiscProfile}
+          colors={colors}
+        />
       )}
     </div>
   );
