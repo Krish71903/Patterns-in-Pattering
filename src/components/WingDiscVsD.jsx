@@ -71,37 +71,6 @@ export default function WingDiscVsD() {
       .domain(d3.extent(scatterData, d => d.D)).nice()
       .range([scatterMargin.top + scatterSize, scatterMargin.top]);
 
-    // Background
-    mainGroup.append("rect")
-      .attr("x", scatterMargin.left)
-      .attr("y", scatterMargin.top)
-      .attr("width", scatterSize)
-      .attr("height", scatterSize)
-      .attr("fill", "#f0f0f5");
-
-    // Grid
-    mainGroup.append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1)
-      .selectAll("line.v")
-      .data(xScale.ticks(5))
-      .join("line")
-      .attr("x1", d => xScale(d))
-      .attr("x2", d => xScale(d))
-      .attr("y1", scatterMargin.top)
-      .attr("y2", scatterMargin.top + scatterSize);
-
-    mainGroup.append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1)
-      .selectAll("line.h")
-      .data(yScale.ticks(5))
-      .join("line")
-      .attr("x1", scatterMargin.left)
-      .attr("x2", scatterMargin.left + scatterSize)
-      .attr("y1", d => yScale(d))
-      .attr("y2", d => yScale(d));
-
     // Axes
     mainGroup.append("g")
       .attr("transform", `translate(0,${scatterMargin.top + scatterSize})`)
@@ -115,7 +84,7 @@ export default function WingDiscVsD() {
       .selectAll("text")
       .style("font-size", "12px");
 
-    // Axis labels
+    //Labels
     mainGroup.append("text")
       .attr("x", scatterMargin.left + scatterSize / 2)
       .attr("y", scatterMargin.top + scatterSize + 50)
@@ -133,7 +102,6 @@ export default function WingDiscVsD() {
       .style("font-weight", "bold")
       .text("Lambda");
     
-    // Title
     mainGroup.append("text")
       .attr("x", scatterMargin.left + scatterSize / 2)
       .attr("y", 40)
@@ -142,7 +110,7 @@ export default function WingDiscVsD() {
       .style("font-weight", "bold")
       .text("Wing Disc Area vs Lambda");
 
-    // Scatter points - using raw area values
+    // Scatter points
     mainGroup.selectAll("circle.scatter")
       .data(filteredData)
       .join("circle")
@@ -155,7 +123,7 @@ export default function WingDiscVsD() {
       .attr("stroke", "#fff")
       .attr("stroke-width", 1);
 
-    // Top histogram - using raw area values
+    // Top histogram
     Object.entries(colors).forEach(([condition, color]) => {
       if (!visibleConditions[condition]) return;
       const subset = filteredData.filter(d => d.condition === condition);
