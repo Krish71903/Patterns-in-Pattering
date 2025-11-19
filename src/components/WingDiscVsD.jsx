@@ -110,18 +110,54 @@ export default function WingDiscVsD() {
       .style("font-weight", "bold")
       .text("Wing Disc Area vs Lambda");
 
-    // Scatter points
-    mainGroup.selectAll("circle.scatter")
+    // Scatter points with different shapes and tooltips
+    const symbolGenerator = d3.symbol()
+      .size(40); // Size of the symbols
+
+    // Shape mapping for each condition
+    const shapeMap = {
+      standard: d3.symbolCircle,
+      hypoxia: d3.symbolTriangle, 
+      cold: d3.symbolSquare
+    };
+
+    // Get tooltip element
+    const tooltip = d3.select("#tooltip");
+
+    // Create scatter points with different shapes
+    mainGroup.selectAll("path.scatter")
       .data(filteredData)
-      .join("circle")
+      .join("path")
       .attr("class", "scatter")
-      .attr("cx", d => xScale(d.area))
-      .attr("cy", d => yScale(d.D))
-      .attr("r", 4)
+      .attr("d", d => symbolGenerator.type(shapeMap[d.condition])())
+      .attr("transform", d => `translate(${xScale(d.area)}, ${yScale(d.D)})`)
       .attr("fill", d => colors[d.condition] || "#999")
       .attr("opacity", 0.7)
       .attr("stroke", "#fff")
-      .attr("stroke-width", 1);
+      .attr("stroke-width", 1)
+    // Tooltip events
+      .on("mouseover", function(event, d) {
+        tooltip
+          .style("opacity", 1)
+          .html(`Disc: ${d.disc}<br>Area: ${d.area.toFixed(2)}<br>Lambda: ${d.D.toFixed(2)}<br>Condition: ${d.condition}`)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");    
+    // Highlight on hover
+        d3.select(this)
+          .attr("opacity", 1)
+          .attr("stroke-width", 2);
+      })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.style("opacity", 0);
+        d3.select(this)
+          .attr("opacity", 0.7)
+          .attr("stroke-width", 1);
+      });
 
     // Top histogram
     Object.entries(colors).forEach(([condition, color]) => {
@@ -218,12 +254,10 @@ export default function WingDiscVsD() {
         .attr("stroke", "#333")
         .attr("stroke-width", 2);
 
-      // Color indicator
-      g.append("rect")
-        .attr("x", 5)
-        .attr("y", -8)
-        .attr("width", 20)
-        .attr("height", 12)
+      // Shape indicator (instead of rectangle)
+      g.append("path")
+        .attr("d", symbolGenerator.type(shapeMap[item.label])())
+        .attr("transform", `translate(${5}, ${2})`)
         .attr("fill", item.color)
         .attr("opacity", visibleConditions[item.label] ? 1 : 0.3);
 
