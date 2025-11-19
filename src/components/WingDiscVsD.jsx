@@ -54,7 +54,7 @@ export default function WingDiscVsD() {
     const mainGroup = svg.append("g");
 
     // ============ SCATTER PLOT WITH HISTOGRAMS ============
-    const scatterMargin = { top: 120, right: 200, bottom: 80, left: 100 };
+    const scatterMargin = { top: 120, right: 200, bottom: 40, left: 100 };
     const scatterSize = 500;
     const histWidth = 60;
     const histHeight = 60;
@@ -274,12 +274,9 @@ export default function WingDiscVsD() {
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#fff" }}>
-      <h2>Wing Disc Area vs Standard Deviation (D)</h2>
       <div style={{ color: "green", marginBottom: "10px" }}>
-        Loaded {scatterData.length} data points
       </div>
-      <svg ref={svgRef} width={1000} height={800} style={{ border: "1px solid #ddd" }}></svg>
-      
+      <svg ref={svgRef} width={800} height={700} style={{ border: "1px solid #ddd" }}></svg>
       {scatterData.length === 0 && (
         <div style={{ textAlign: "center", marginTop: "20px", color: "#666" }}>
           Loading data...
