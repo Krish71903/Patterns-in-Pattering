@@ -139,8 +139,8 @@ export default function WingCoordinates() {
             .attr("x2", xScale(pointMap[p2].x))
             .attr("y2", yScale(pointMap[p2].y))
             .attr("stroke", colors[pointMap[p1].condition] || "#999")
-            .attr("stroke-width", 2)
-            .attr("opacity", 0.7);
+            .attr("stroke-width", 10)
+            .attr("opacity", 0.95);
         }
       });
     }

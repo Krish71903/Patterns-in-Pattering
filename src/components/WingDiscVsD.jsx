@@ -92,7 +92,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const histWidth = 60;
     const histHeight = 60;
 
-    // Tooltip div (single global div on body)
+    // Create tooltip (ONCE at the top)
     let tooltip = d3.select("#wingdisc-tooltip");
     if (tooltip.empty()) {
       tooltip = d3
@@ -181,7 +181,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const hasSelection = selectedDiscIDs.length > 0;
     const selectedSet = new Set(selectedDiscIDs);
 
-    // Scatter points
+    // Scatter points with tooltip functionality
     mainGroup
       .selectAll("path.scatter")
       .data(filteredData)
@@ -215,7 +215,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           setSelectedDisc(d.disc);
         }
       })
-      // tooltip events
+      // hover: show tooltip
       .on("mouseover", function (event, d) {
         tooltip
           .style("opacity", 1)
@@ -224,27 +224,16 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
               2
             )}<br>Lambda: ${d.D.toFixed(2)}<br>Condition: ${d.condition}`
           )
-          .style("left", event.pageX + 10 + "px")
-          .style("top", event.pageY - 10 + "px");
-
-        d3.select(this)
-          .attr("opacity", 1)
-          .attr("stroke-width", 2);
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");
       })
-      .on("mousemove", function (event) {
+      .on("mousemove", function(event) {
         tooltip
-          .style("left", event.pageX + 10 + "px")
-          .style("top", event.pageY - 10 + "px");
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");
       })
-      .on("mouseout", function (event, d) {
+      .on("mouseout", function() {
         tooltip.style("opacity", 0);
-
-        d3.select(this)
-          .attr("stroke-width", d.disc === selectedDisc ? 3 : 1)
-          .attr("opacity", () => {
-            if (!hasSelection) return 0.7;
-            return selectedSet.has(d.disc) ? 0.9 : 0.15;
-          });
       });
 
     // ------- BRUSH (X-axis only, Area) -------
