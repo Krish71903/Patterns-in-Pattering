@@ -71,12 +71,12 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 1000;
-    const height = 800;
+    const width = 600;
+    const height = 500;
 
-    const margin = { top: 80, right: 80, bottom: 70, left: 90 };
-    const plotWidth = 600;
-    const plotHeight = 500;
+    const margin = { top: 48, right: 48, bottom: 42, left: 54 };
+    const plotWidth = 360;
+    const plotHeight = 300;
 
     const mainGroup = svg.append("g");
 
@@ -112,22 +112,22 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("transform", `translate(0,${margin.top + plotHeight})`)
       .call(d3.axisBottom(xScale).ticks(6))
       .selectAll("text")
-      .style("font-size", "12px");
+      .style("font-size", "10px");
 
     mainGroup
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(yScale).ticks(5))
       .selectAll("text")
-      .style("font-size", "12px");
+      .style("font-size", "10px");
 
     // labels
     mainGroup
       .append("text")
       .attr("x", margin.left + plotWidth / 2)
-      .attr("y", margin.top + plotHeight + 50)
+      .attr("y", margin.top + plotHeight + 30)
       .attr("text-anchor", "middle")
-      .style("font-size", "16px")
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Distance Relative to Peak");
 
@@ -135,18 +135,18 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .append("text")
       .attr("transform", "rotate(-90)")
       .attr("x", -(margin.top + plotHeight / 2))
-      .attr("y", margin.left - 60)
+      .attr("y", margin.left - 36)
       .attr("text-anchor", "middle")
-      .style("font-size", "16px")
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Relative intensity");
 
     mainGroup
       .append("text")
       .attr("x", margin.left + plotWidth / 2)
-      .attr("y", 40)
+      .attr("y", 24)
       .attr("text-anchor", "middle")
-      .style("font-size", "18px")
+      .style("font-size", "14px")
       .style("font-weight", "bold")
       .text("Gradient Profiles");
 
@@ -195,14 +195,14 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     }
 
     // legend
-    const legendX = margin.left + plotWidth + 40;
-    const legendY = margin.top + 40;
+    const legendX = margin.left + plotWidth + 24;
+    const legendY = margin.top + 24;
 
     mainGroup
       .append("text")
       .attr("x", legendX)
-      .attr("y", legendY - 20)
-      .style("font-size", "16px")
+      .attr("y", legendY - 12)
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Condition");
 
@@ -215,7 +215,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     legendItems.forEach((item, i) => {
       const g = mainGroup
         .append("g")
-        .attr("transform", `translate(${legendX}, ${legendY + i * 30})`)
+        .attr("transform", `translate(${legendX}, ${legendY + i * 18})`)
         .style("cursor", "pointer")
         .on("click", () => {
           setVisibleConditions((prev) => ({
@@ -239,18 +239,18 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       g.append("text")
         .attr("x", 3)
         .attr("y", 2)
-        .style("font-size", "13px")
+        .style("font-size", "10px")
         .style("opacity", visibleConditions[item.label] ? 1 : 0.5)
         .text(item.label);
     });
   }, [curves, visibleConditions, selectedDiscIDs]);
 
   return (
-    <div style={{ padding: "20px", backgroundColor: "#fff" }}>
+    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
       <svg
         ref={svgRef}
-        width={1000}
-        height={800}
+        width={600}
+        height={500}
         style={{ border: "1px solid #ddd" }}
       />
       {!curves.length && (

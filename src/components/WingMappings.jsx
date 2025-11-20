@@ -62,9 +62,9 @@ export default function WingCoordinates() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 1000;
-    const height = 800;
-    const margin = { top: 60, right: 20, bottom: 40, left: 60 };
+    const width = 600;
+    const height = 500;
+    const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
 
@@ -90,36 +90,36 @@ export default function WingCoordinates() {
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(xScale))
       .selectAll("text")
-      .style("font-size", "10px");
+      .style("font-size", "8px");
 
     mainGroup.append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(yScale))
       .selectAll("text")
-      .style("font-size", "10px");
+      .style("font-size", "8px");
 
     // Labels
     mainGroup.append("text")
       .attr("x", width / 2)
-      .attr("y", height - 10)
+      .attr("y", height - 6)
       .attr("text-anchor", "middle")
-      .style("font-size", "12px")
+      .style("font-size", "10px")
       .text("X Coordinate");
 
     mainGroup.append("text")
       .attr("transform", "rotate(-90)")
       .attr("x", -height / 2)
-      .attr("y", 15)
+      .attr("y", 9)
       .attr("text-anchor", "middle")
-      .style("font-size", "12px")
+      .style("font-size", "10px")
       .text("Y Coordinate");
 
     // Title
     mainGroup.append("text")
       .attr("x", width / 2)
-      .attr("y", 30)
+      .attr("y", 18)
       .attr("text-anchor", "middle")
-      .style("font-size", "16px")
+      .style("font-size", "14px")
       .style("font-weight", "bold")
       .text("Wing Coordinate Landmarks");
 
@@ -139,7 +139,7 @@ export default function WingCoordinates() {
             .attr("x2", xScale(pointMap[p2].x))
             .attr("y2", yScale(pointMap[p2].y))
             .attr("stroke", colors[pointMap[p1].condition] || "#999")
-            .attr("stroke-width", 10)
+            .attr("stroke-width", 6)
             .attr("opacity", 0.95);
         }
       });
@@ -225,33 +225,33 @@ export default function WingCoordinates() {
 
     // Add circles for points
     points.append("circle")
-      .attr("r", 6)
+      .attr("r", 4)
       .attr("fill", d => colors[d.condition] || "#999");
 
     // Add letters for points
     points.append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0.3em")
-      .style("font-size", "10px")
+      .style("font-size", "8px")
       .style("font-weight", "bold")
       .style("fill", "white")
       .style("pointer-events", "none")
       .text(d => d.letter);
 
     // Condition Filter Legend with Checkboxes
-    const legendX = width - 160;
+    const legendX = width - 96;
     const legendY = margin.top;
 
     mainGroup.append("text")
       .attr("x", legendX)
-      .attr("y", legendY - 10)
-      .style("font-size", "14px")
+      .attr("y", legendY - 6)
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Condition");
 
     Object.entries(colors).forEach(([condition, color], i) => {
       const legendItem = mainGroup.append("g")
-        .attr("transform", `translate(${legendX}, ${legendY + i * 25})`)
+        .attr("transform", `translate(${legendX}, ${legendY + i * 15})`)
         .style("cursor", "pointer")
         .on("click", () => {
           setVisibleConditions(prev => ({
@@ -282,7 +282,7 @@ export default function WingCoordinates() {
       legendItem.append("text")
         .attr("x", 15)
         .attr("y", 4)
-        .style("font-size", "12px")
+        .style("font-size", "10px")
         .style("opacity", visibleConditions[condition] ? 1 : 0.5)
         .text(condition);
     });
@@ -291,9 +291,9 @@ export default function WingCoordinates() {
     if (selectedId) {
       mainGroup.append("text")
         .attr("x", width / 2)
-        .attr("y", 50)
+        .attr("y", 30)
         .attr("text-anchor", "middle")
-        .style("font-size", "14px")
+        .style("font-size", "12px")
         .style("font-weight", "bold")
         .style("fill", "#d95f02")
         .text(`Showing connections for: ${selectedId}`);
@@ -301,16 +301,16 @@ export default function WingCoordinates() {
 
     // Instructions
     mainGroup.append("text")
-      .attr("x", width - 180)
-      .attr("y", height - 60)
-      .style("font-size", "11px")
+      .attr("x", width - 108)
+      .attr("y", height - 36)
+      .style("font-size", "9px")
       .style("fill", "#666")
       .text("Click: show connections");
 
     mainGroup.append("text")
-      .attr("x", width - 180)
-      .attr("y", height - 45)
-      .style("font-size", "11px")
+      .attr("x", width - 108)
+      .attr("y", height - 27)
+      .style("font-size", "9px")
       .style("fill", "#666")
       .text("Hover: highlight same points");
 
@@ -320,7 +320,7 @@ export default function WingCoordinates() {
   }, [data, selectedId, visibleConditions]);
 
   return (
-    <div style={{ padding: "20px", backgroundColor: "#fff" }}>
+    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
       <h2>Wing Coordinate Landmarks</h2>
       <div style={{ color: "green", marginBottom: "10px" }}>
         Loaded {data.length} landmark points • Showing {data.filter(d => visibleConditions[d.condition]).length} points
@@ -328,8 +328,8 @@ export default function WingCoordinates() {
       </div>
       <svg
         ref={svgRef}
-        width={1000}
-        height={800}
+        width={600}
+        height={500}
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
       {data.length === 0 && (

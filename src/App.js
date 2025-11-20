@@ -31,9 +31,16 @@ function App() {
         </p>
       </div>
 
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
+        gap: "10px",
+        width: "100%"
+      }}>
         <WingDiscVsD onSelectionChange={setSelectedDiscs} />
         <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
         <WingMappings />
+      </div>
     </div>
   );
 }

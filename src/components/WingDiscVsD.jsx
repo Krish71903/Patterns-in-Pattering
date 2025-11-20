@@ -87,10 +87,10 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
 
     const mainGroup = svg.append("g");
 
-    const scatterMargin = { top: 120, right: 200, bottom: 40, left: 100 };
-    const scatterSize = 500;
-    const histWidth = 60;
-    const histHeight = 60;
+    const scatterMargin = { top: 72, right: 120, bottom: 24, left: 60 };
+    const scatterSize = 300;
+    const histWidth = 36;
+    const histHeight = 36;
 
     // Create tooltip (ONCE at the top)
     let tooltip = d3.select("#wingdisc-tooltip");
@@ -132,22 +132,22 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .attr("transform", `translate(0,${scatterMargin.top + scatterSize})`)
       .call(d3.axisBottom(xScale).ticks(5))
       .selectAll("text")
-      .style("font-size", "12px");
+      .style("font-size", "10px");
 
     mainGroup
       .append("g")
       .attr("transform", `translate(${scatterMargin.left},0)`)
       .call(d3.axisLeft(yScale).ticks(5))
       .selectAll("text")
-      .style("font-size", "12px");
+      .style("font-size", "10px");
 
     // Labels
     mainGroup
       .append("text")
       .attr("x", scatterMargin.left + scatterSize / 2)
-      .attr("y", scatterMargin.top + scatterSize + 50)
+      .attr("y", scatterMargin.top + scatterSize + 30)
       .attr("text-anchor", "middle")
-      .style("font-size", "16px")
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Area");
 
@@ -155,23 +155,23 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .append("text")
       .attr("transform", `rotate(-90)`)
       .attr("x", -(scatterMargin.top + scatterSize / 2))
-      .attr("y", scatterMargin.left - 60)
+      .attr("y", scatterMargin.left - 36)
       .attr("text-anchor", "middle")
-      .style("font-size", "16px")
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Lambda");
 
     mainGroup
       .append("text")
       .attr("x", scatterMargin.left + scatterSize / 2)
-      .attr("y", 40)
+      .attr("y", 24)
       .attr("text-anchor", "middle")
-      .style("font-size", "18px")
+      .style("font-size", "14px")
       .style("font-weight", "bold")
       .text("Wing Disc Area vs Lambda");
 
     // Shapes for conditions
-    const symbolGenerator = d3.symbol().size(45);
+    const symbolGenerator = d3.symbol().size(30);
     const shapeMap = {
       standard: d3.symbolCircle,
       hypoxia: d3.symbolTriangle,
@@ -339,14 +339,14 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     });
 
     // Legend (conditions)
-    const legendX = scatterMargin.left + scatterSize + 30;
-    const legendY = scatterMargin.top - 65;
+    const legendX = scatterMargin.left + scatterSize + 18;
+    const legendY = scatterMargin.top - 39;
 
     mainGroup
       .append("text")
       .attr("x", legendX)
-      .attr("y", legendY - 20)
-      .style("font-size", "16px")
+      .attr("y", legendY - 12)
+      .style("font-size", "12px")
       .style("font-weight", "bold")
       .text("Condition");
 
@@ -361,7 +361,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     legendItems.forEach((item, i) => {
       const g = mainGroup
         .append("g")
-        .attr("transform", `translate(${legendX}, ${legendY + i * 30})`)
+        .attr("transform", `translate(${legendX}, ${legendY + i * 18})`)
         .style("cursor", "pointer")
         .on("click", () => {
           setVisibleConditions((prev) => ({
@@ -396,7 +396,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       g.append("text")
         .attr("x", 15)
         .attr("y", 7)
-        .style("font-size", "13px")
+        .style("font-size", "10px")
         .style("opacity", visibleConditions[item.label] ? 1 : 0.5)
         .text(item.label);
     });
@@ -442,11 +442,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   // Render
   // ------------------------------------------------------------
   return (
-    <div style={{ padding: "20px", backgroundColor: "#fff" }}>
+    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
       <svg
         ref={svgRef}
-        width={1000}
-        height={800}
+        width={600}
+        height={500}
         style={{ border: "1px solid #ddd" }}
       />
       {scatterData.length === 0 && (
