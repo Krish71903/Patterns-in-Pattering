@@ -21,6 +21,11 @@ export default function WingCoordinates() {
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [visibleConditions, setVisibleConditions] = useState({
+    standard: true,
+    hypoxia: true,
+    cold: true
+  });
 
   // Load data
   useEffect(() => {
@@ -63,8 +68,11 @@ export default function WingCoordinates() {
 
     const mainGroup = svg.append("g");
 
+    // Filter data based on visible conditions
+    const filteredData = data.filter(d => visibleConditions[d.condition]);
+
     // Get all coordinates for scaling
-    const allCoords = data.map(d => [d.x, d.y]);
+    const allCoords = filteredData.map(d => [d.x, d.y]);
     const xExtent = d3.extent(allCoords, d => d[0]);
     const yExtent = d3.extent(allCoords, d => d[1]);
 
@@ -117,7 +125,7 @@ export default function WingCoordinates() {
 
     // Draw connections for selected ID
     if (selectedId) {
-      const selectedWingData = data.filter(d => d.id === selectedId);
+      const selectedWingData = filteredData.filter(d => d.id === selectedId);
       const pointMap = {};
       selectedWingData.forEach(d => {
         pointMap[d.pointId] = d;
@@ -132,21 +140,25 @@ export default function WingCoordinates() {
             .attr("y2", yScale(pointMap[p2].y))
             .attr("stroke", colors[pointMap[p1].condition] || "#999")
             .attr("stroke-width", 2)
-            .attr("opacity", 0.6);
+            .attr("opacity", 0.7);
         }
       });
     }
 
-    // Calculate opacity for each point
-    const getOpacity = (d) => {
-      if (!selectedId) return 0.7;
+    // Calculate opacity for each point - IMPROVED VISIBILITY
+    const getOpacity = (d, isHovered = false, hoveredPointId = null) => {
+      if (isHovered) {
+        if (d.id === selectedId) return 1;
+        if (d.pointId === hoveredPointId) return 0.8;
+        return 0.3;
+      }
+      
+      if (!selectedId) return 0.8; // Much higher default opacity
       
       if (d.id === selectedId) {
         return 1;
-      } else if (d.pointId === selectedId) {
-        return 0.5;
       } else {
-        return 0.1;
+        return 0.6; // Higher opacity for unselected points
       }
     };
 
@@ -163,27 +175,24 @@ export default function WingCoordinates() {
       .style("opacity", 0);
 
     // Draw points
-    mainGroup.selectAll("g.point")
-      .data(data)
+    const points = mainGroup.selectAll("g.point")
+      .data(filteredData)
       .join("g")
       .attr("class", "point")
       .attr("transform", d => `translate(${xScale(d.x)}, ${yScale(d.y)})`)
       .style("cursor", "pointer")
+      .style("opacity", d => getOpacity(d))
       .on("click", (event, d) => {
         setSelectedId(selectedId === d.id ? null : d.id);
       })
       .on("mouseover", function(event, d) {
-        // Highlight this point and same-number points
         const currentPointId = d.pointId;
         
+        // Highlight this point and same-number points
         mainGroup.selectAll("g.point")
           .transition()
           .duration(200)
-          .style("opacity", point => {
-            if (point.id === d.id) return 1;
-            if (point.pointId === currentPointId) return 0.5;
-            return 0.1;
-          });
+          .style("opacity", point => getOpacity(point, true, currentPointId));
 
         // Show tooltip
         tooltip
@@ -205,7 +214,7 @@ export default function WingCoordinates() {
           .style("top", (event.pageY - 10) + "px");
       })
       .on("mouseout", function() {
-        // Reset opacities
+        // Reset opacities to non-hover state
         mainGroup.selectAll("g.point")
           .transition()
           .duration(200)
@@ -215,69 +224,107 @@ export default function WingCoordinates() {
       });
 
     // Add circles for points
-    mainGroup.selectAll("g.point")
-      .append("circle")
+    points.append("circle")
       .attr("r", 6)
-      .attr("fill", d => colors[d.condition] || "#999")
-      .style("opacity", d => getOpacity(d));
+      .attr("fill", d => colors[d.condition] || "#999");
 
     // Add letters for points
-    mainGroup.selectAll("g.point")
-      .append("text")
+    points.append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0.3em")
       .style("font-size", "10px")
       .style("font-weight", "bold")
       .style("fill", "white")
       .style("pointer-events", "none")
-      .style("opacity", d => getOpacity(d))
       .text(d => d.letter);
 
-    // Legend
-    const legend = mainGroup.append("g")
-      .attr("transform", `translate(${width - 150}, ${margin.top})`);
+    // Condition Filter Legend with Checkboxes
+    const legendX = width - 160;
+    const legendY = margin.top;
 
-    legend.append("text")
-      .attr("x", 0)
-      .attr("y", 0)
+    mainGroup.append("text")
+      .attr("x", legendX)
+      .attr("y", legendY - 10)
       .style("font-size", "14px")
       .style("font-weight", "bold")
-      .text("Conditions");
+      .text("Condition");
 
     Object.entries(colors).forEach(([condition, color], i) => {
-      const legendItem = legend.append("g")
-        .attr("transform", `translate(0, ${25 + i * 20})`);
+      const legendItem = mainGroup.append("g")
+        .attr("transform", `translate(${legendX}, ${legendY + i * 25})`)
+        .style("cursor", "pointer")
+        .on("click", () => {
+          setVisibleConditions(prev => ({
+            ...prev,
+            [condition]: !prev[condition]
+          }));
+        });
 
+      // Checkbox
+      legendItem.append("rect")
+        .attr("x", -15)
+        .attr("y", -8)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", visibleConditions[condition] ? color : "white")
+        .attr("stroke", "#333")
+        .attr("stroke-width", 1);
+
+      // Color indicator
       legendItem.append("circle")
-        .attr("r", 6)
-        .attr("fill", color);
+        .attr("cx", 5)
+        .attr("cy", 0)
+        .attr("r", 5)
+        .attr("fill", color)
+        .attr("opacity", visibleConditions[condition] ? 1 : 0.3);
 
+      // Label
       legendItem.append("text")
         .attr("x", 15)
         .attr("y", 4)
         .style("font-size", "12px")
+        .style("opacity", visibleConditions[condition] ? 1 : 0.5)
         .text(condition);
     });
 
+    // Selected ID display
+    if (selectedId) {
+      mainGroup.append("text")
+        .attr("x", width / 2)
+        .attr("y", 50)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .style("fill", "#d95f02")
+        .text(`Showing connections for: ${selectedId}`);
+    }
+
     // Instructions
     mainGroup.append("text")
-      .attr("x", width - 150)
-      .attr("y", height - 20)
+      .attr("x", width - 180)
+      .attr("y", height - 60)
       .style("font-size", "11px")
       .style("fill", "#666")
-      .text("Click: show connections • Hover: highlight");
+      .text("Click: show connections");
+
+    mainGroup.append("text")
+      .attr("x", width - 180)
+      .attr("y", height - 45)
+      .style("font-size", "11px")
+      .style("fill", "#666")
+      .text("Hover: highlight same points");
 
     return () => {
       tooltip.remove();
     };
-  }, [data, selectedId]);
+  }, [data, selectedId, visibleConditions]);
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#fff" }}>
       <h2>Wing Coordinate Landmarks</h2>
       <div style={{ color: "green", marginBottom: "10px" }}>
-        Loaded {data.length} landmark points
-        {selectedId && ` • Showing connections for: ${selectedId}`}
+        Loaded {data.length} landmark points • Showing {data.filter(d => visibleConditions[d.condition]).length} points
+        {selectedId && ` • Connections for: ${selectedId}`}
       </div>
       <svg
         ref={svgRef}

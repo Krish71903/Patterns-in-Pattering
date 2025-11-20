@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import WingDiscVsD from "./components/WingDiscVsD";
 import GradientProfilesRaw from "./components/GradientProfilesRaw";
+import WingMappings from "./components/WingMappings";
 
 function App() {
   const [selectedDiscs, setSelectedDiscs] = useState([]);
@@ -16,9 +17,10 @@ function App() {
         background: "#fafafa"
       }}
     >
-      <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
 
-      <WingDiscVsD onSelectionChange={setSelectedDiscs} />
+        <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
+        <WingDiscVsD onSelectionChange={setSelectedDiscs} />
+        <WingMappings />
     </div>
   );
 }
