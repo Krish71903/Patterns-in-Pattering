@@ -7,7 +7,8 @@ export async function loadAllData() {
         d3.csv("/data/Profiles_Vg_17C.csv", d3.autoType),
         d3.csv("/data/norm_vghypo-normo.csv", d3.autoType),
         d3.csv("/data/norm_curve_table_17C_25C.csv", d3.autoType),
-        d3.csv("/data/coords.csv", d3.autoType)
+        d3.csv("/data/coords.csv", d3.autoType),
+        d3.csv("/data/mergedWingCoords.csv", d3.autoType)
     ])
 
     return {
@@ -15,6 +16,7 @@ export async function loadAllData() {
     vgLowTemp,
     normHypoxia,
     normTemp,
-    coords
+    coords,
+    mergedWingCoords
   };
 }

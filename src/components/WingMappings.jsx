@@ -1,6 +1,8 @@
 import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
 
+import mergedRawGradCSV from "../data/mergedWingCoords.csv";
+
 const colors = {
   standard: "#d95f02",
   hypoxia: "#7570b3",
