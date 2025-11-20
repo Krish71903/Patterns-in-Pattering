@@ -1,17 +1,18 @@
 {
   "files": {
     "main.css": "/Patterns-in-Pattering/static/css/main.e6c13ad2.css",
-    "main.js": "/Patterns-in-Pattering/static/js/main.b935ae93.js",
+    "main.js": "/Patterns-in-Pattering/static/js/main.0f2a3781.js",
     "static/js/787.949cb341.chunk.js": "/Patterns-in-Pattering/static/js/787.949cb341.chunk.js",
     "static/media/mergedRawGrad.csv": "/Patterns-in-Pattering/static/media/mergedRawGrad.f0787fbf15d86fbd4a50.csv",
     "static/media/mergedWingCoords.csv": "/Patterns-in-Pattering/static/media/mergedWingCoords.ad863667e7dfd51c2513.csv",
+    "static/media/mergedNormalizedGrad.csv": "/Patterns-in-Pattering/static/media/mergedNormalizedGrad.841a5b84faf76e2db476.csv",
     "index.html": "/Patterns-in-Pattering/index.html",
     "main.e6c13ad2.css.map": "/Patterns-in-Pattering/static/css/main.e6c13ad2.css.map",
-    "main.b935ae93.js.map": "/Patterns-in-Pattering/static/js/main.b935ae93.js.map",
+    "main.0f2a3781.js.map": "/Patterns-in-Pattering/static/js/main.0f2a3781.js.map",
     "787.949cb341.chunk.js.map": "/Patterns-in-Pattering/static/js/787.949cb341.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.b935ae93.js"
+    "static/js/main.0f2a3781.js"
   ]
 }
