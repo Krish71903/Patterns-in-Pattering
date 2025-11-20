@@ -350,8 +350,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     });
 
     // Legend (conditions)
-    const legendX = scatterMargin.left + scatterSize + 100;
-    const legendY = scatterMargin.top + 50;
+    const legendX = scatterMargin.left + scatterSize + 30;
+    const legendY = scatterMargin.top - 65;
 
     mainGroup
       .append("text")
@@ -383,7 +383,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
 
       g.append("rect")
         .attr("x", -20)
-        .attr("y", -10)
+        .attr("y", -6)
         .attr("width", 15)
         .attr("height", 15)
         .attr(
@@ -405,8 +405,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         .attr("opacity", visibleConditions[item.label] ? 1 : 0.3);
 
       g.append("text")
-        .attr("x", 35)
-        .attr("y", 2)
+        .attr("x", 15)
+        .attr("y", 7)
         .style("font-size", "13px")
         .style("opacity", visibleConditions[item.label] ? 1 : 0.5)
         .text(item.label);
