@@ -4,27 +4,27 @@ import React, { useEffect, useRef, useState } from "react";
 import mergedRawGradCSV from "../data/mergedRawGrad.csv";
 
 const colors = {
-  Normoxia: "#ff9900",
-  Hypoxia: "#a56cc1",
-  LowTemp: "#4ab8a1"
+  standard: "#d95f02",
+  hypoxia: "#7570b3",
+  cold: "#1b9e77"
 };
 
 function mapCondition(raw) {
-  if (!raw) return "Normoxia";
+  if (!raw) return "standard";
   const s = raw.toLowerCase();
-  if (s.includes("hypo")) return "Hypoxia";
+  if (s.includes("hypo")) return "hypoxia";
   if (s.includes("cold") || s.includes("17c") || s.includes("low"))
-    return "LowTemp";
-  return "Normoxia";
+    return "cold";
+  return "standard";
 }
 
 export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
   const svgRef = useRef();
   const [curves, setCurves] = useState([]);
   const [visibleConditions, setVisibleConditions] = useState({
-    Normoxia: true,
-    Hypoxia: true,
-    LowTemp: true
+    standard: true,
+    hypoxia: true,
+    cold: true
   });
 
   // Load & preprocess
@@ -93,28 +93,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .scaleLinear()
       .domain([0, 1])
       .range([margin.top + plotHeight, margin.top]);
-
-    // background
-    mainGroup
-      .append("rect")
-      .attr("x", margin.left)
-      .attr("y", margin.top)
-      .attr("width", plotWidth)
-      .attr("height", plotHeight)
-      .attr("fill", "#f0f0f5");
-
-    // grid
-    mainGroup
-      .append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1)
-      .selectAll("line.v")
-      .data(xScale.ticks(6))
-      .join("line")
-      .attr("x1", (d) => xScale(d))
-      .attr("x2", (d) => xScale(d))
-      .attr("y1", margin.top)
-      .attr("y2", margin.top + plotHeight);
 
     mainGroup
       .append("g")
@@ -229,9 +207,9 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .text("Condition");
 
     const legendItems = [
-      { label: "Normoxia", color: colors.Normoxia },
-      { label: "Hypoxia", color: colors.Hypoxia },
-      { label: "LowTemp", color: colors.LowTemp }
+      { label: "standard", color: colors.standard },
+      { label: "hypoxia", color: colors.hypoxia },
+      { label: "cold", color: colors.cold }
     ];
 
     legendItems.forEach((item, i) => {
@@ -245,7 +223,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
             [item.label]: !prev[item.label]
           }));
         });
-
+        
       g.append("rect")
         .attr("x", -20)
         .attr("y", -10)
@@ -257,14 +235,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
         )
         .attr("stroke", "#333")
         .attr("stroke-width", 2);
-
-      g.append("rect")
-        .attr("x", 5)
-        .attr("y", -8)
-        .attr("width", 20)
-        .attr("height", 12)
-        .attr("fill", item.color)
-        .attr("opacity", visibleConditions[item.label] ? 1 : 0.3);
 
       g.append("text")
         .attr("x", 35)
