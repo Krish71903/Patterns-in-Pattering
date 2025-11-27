@@ -1,0 +1,99 @@
+---
+title: "Shree Data Manipulation"
+output: html_document
+date: "2025-11-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+
+# Read the CSV
+#df <- read.csv('~/Documents/CS_529/KrishClone/Patterns-in-Pattering-Vestigial-Morphogen-Gradients/src/data/mergedRawGrad.csv')
+
+# Calculate relative distances
+df <- df %>%
+  group_by(disc) %>%
+  mutate(
+    max_distance = distance[which.max(value)],
+    relative_distance = distance - max_distance
+  ) %>%
+  select(-max_distance) %>%
+  ungroup()
+
+# Write the result
+write.csv(df, '~/Documents/CS_529/KrishClone/Patterns-in-Pattering-Vestigial-Morphogen-Gradients/src/data/mergedRawGradAdjusted.csv', row.names = FALSE)
+```
+
+```{r}
+```{r}
+# Read your data and do initial Procrustes (your existing code)
+df <- read.csv('~/Downloads/mergedWingCoordsR.csv')
+
+# Create coordinate array and apply initial flipping rules
+n_specimens <- nrow(df)
+coord_array <- array(NA, dim = c(15, 2, n_specimens))
+
+for (i in 1:n_specimens) {
+  x_coords <- as.numeric(df[i, paste0("X", 1:15)])
+  y_coords <- as.numeric(df[i, paste0("Y", 1:15)])
+  coord_array[,,i] <- cbind(x_coords, y_coords)
+}
+
+# Apply initial flipping rules
+for (i in 1:dim(coord_array)[3]) {
+  if (coord_array[1, 2, i] < coord_array[3, 2, i]) {
+    coord_array[, 2, i] <- -coord_array[, 2, i]
+  }
+  if (coord_array[3, 1, i] > coord_array[13, 1, i]) {
+    coord_array[, 1, i] <- -coord_array[, 1, i]
+  }
+}
+
+# First Procrustes analysis
+gpa_output1 <- gpagen(coord_array, ProcD = FALSE, print.progress = FALSE)
+
+# Check which specimens have Y15 > 0 after first adjustment
+specimens_to_flip <- which(gpa_output1$coords[15, 2, ] > 0)
+cat("Flipping specimens with Y15 > 0:", specimens_to_flip, "\n")
+
+# Flip those specimens in the ORIGINAL coordinate array
+for (i in specimens_to_flip) {
+  coord_array[, 2, i] <- -coord_array[, 2, i]  # Flip Y coordinates
+}
+
+# Second Procrustes analysis on the fully corrected coordinates
+gpa_output_final <- gpagen(coord_array, ProcD = FALSE, print.progress = FALSE)
+
+# Add final aligned coordinates to dataframe
+for (i in 1:15) {
+  df[[paste0("Procrustes_X", i)]] <- gpa_output_final$coords[i, 1, ]
+  df[[paste0("Procrustes_Y", i)]] <- gpa_output_final$coords[i, 2, ]
+}
+
+df$Procrustes_Centroid_Size <- gpa_output_final$Csize
+
+# Save results
+write.csv(df, "vestigialWingProcrustesTrans.csv", row.names = FALSE)
+
+library(ggplot2)
+
+# Create data frame for plotting
+plot_data <- data.frame(
+  X = as.vector(gpa_output_final$coords[,1,]),
+  Y = as.vector(gpa_output_final$coords[,2,]), 
+  Landmark = rep(1:15, times = n_specimens),
+  Specimen = rep(df$Id, each = 15)
+)
+
+# Plot with colors by landmark number
+ggplot(plot_data, aes(x = X, y = Y, color = as.factor(Landmark))) +
+  geom_point(size = 2) +
+  scale_color_manual(values = rainbow(15)) +
+  labs(color = "Landmark Number") +
+  theme_minimal() +
+  ggtitle("Procrustes Alignment - Color by Landmark Number")
+```
