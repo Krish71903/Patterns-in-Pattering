@@ -38,7 +38,7 @@ export default function WingCoordinates() {
   const [centroidFilters, setCentroidFilters] = useState({
     below: 0.1,
     above: 0.9,
-    within: [0.05, 0.95]
+    within: [0.00, 1.00]
   });
   const [sexFilters, setSexFilters] = useState({
     female: true,
@@ -421,9 +421,13 @@ export default function WingCoordinates() {
   }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, centroidRange, transform]);
 
   const formatCentroidValue = (value) => {
-    const actualValue = centroidRange[0] + value * (centroidRange[1] - centroidRange[0]);
-    return actualValue.toFixed(2);
-  };
+  // Check if centroidRange is valid and data has loaded
+  if (!centroidRange || centroidRange.length !== 2 || centroidRange[0] === centroidRange[1] || !isFinite(centroidRange[0]) || !isFinite(centroidRange[1])) {
+    return "Loading...";
+  }
+  const actualValue = centroidRange[0] + value * (centroidRange[1] - centroidRange[0]);
+  return actualValue.toFixed(2);
+};
 
   return (
     <div style={{ padding: "10px", backgroundColor: "#fff" }}>
