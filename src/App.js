@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import WingDiscVsD from "./components/WingDiscVsD";
 import GradientProfilesRaw from "./components/GradientProfilesRaw";
+import GradientProfilesAdjusted from "./components/GradientProfilesAdjusted";
 import WingMappings from "./components/WingMappings";
 
 function App() {
@@ -34,11 +35,12 @@ function App() {
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
-        gap: "10px",
+        gap: "5px",
         width: "100%"
       }}>
         <WingDiscVsD onSelectionChange={setSelectedDiscs} />
         <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
+        <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
         <WingMappings />
       </div>
     </div>
