@@ -65,8 +65,8 @@ export default function WingCoordinates() {
             id: row.Id,
             condition: row.Condition,
             sex: row.Sex,
-            centroidSize: +row['Centroid Size'],
-            logCentroidSize: +row['Log Centroid Size']
+            centroidSize: +row['Centroid.Size'],
+            logCentroidSize: +row['Log.Centroid.Size']
           });
         }
         return points;
@@ -75,7 +75,7 @@ export default function WingCoordinates() {
       console.log("Processed points:", processed.length);
       
       // Calculate centroid size range for normalization
-      const sizes = [...new Set(csvData.map(d => +d['Centroid Size']))];
+      const sizes = [...new Set(csvData.map(d => +d['Centroid.Size']))];
       const minSize = d3.min(sizes);
       const maxSize = d3.max(sizes);
       setCentroidRange([minSize, maxSize]);
