@@ -35,15 +35,84 @@ function App() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
-        gap: "5px",
-        width: "100%"
+        gridTemplateColumns: "1.2fr 0.8fr",
+        gap: "12px",
+        width: "100%",
+        maxWidth: "100%",
+        minHeight: "calc(100vh - 180px)"
       }}>
-        <WingDiscVsD onSelectionChange={setSelectedDiscs} />
-        <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
-        <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
-        <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
-        <WingMappings />
+        {/* Left Panel */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
+        }}>
+          {/* Top: Main scatter plot */}
+          <div style={{ 
+            flex: "0 0 auto",
+            backgroundColor: "#fff",
+            borderRadius: "8px",
+            padding: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
+            <WingDiscVsD onSelectionChange={setSelectedDiscs} />
+          </div>
+          
+          {/* Bottom: Three smaller plots in a row */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "10px",
+            flex: "0 0 auto"
+          }}>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
+              <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
+            </div>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
+              <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
+            </div>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
+              <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
+        }}>
+          {/* Wing mapping plot - includes its own controls */}
+          <div style={{ 
+            flex: "1 1 auto",
+            backgroundColor: "#fff",
+            borderRadius: "8px",
+            padding: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            minHeight: "600px"
+          }}>
+            <WingMappings />
+          </div>
+        </div>
       </div>
     </div>
   );
