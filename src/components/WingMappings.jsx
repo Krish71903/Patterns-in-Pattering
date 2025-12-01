@@ -197,15 +197,6 @@ export default function WingCoordinates() {
       .style("font-size", "10px")
       .text("Y Coordinate");
 
-    // Title
-    mainGroup.append("text")
-      .attr("x", width / 2)
-      .attr("y", 18)
-      .attr("text-anchor", "middle")
-      .style("font-size", "14px")
-      .style("font-weight", "bold")
-      .text("Wing Coordinate Landmarks");
-
     // Draw connections for ALL selected IDs
     Array.from(selectedIds).forEach(selectedId => {
       const selectedWingData = filteredData.filter(d => d.id === selectedId);
@@ -222,7 +213,7 @@ export default function WingCoordinates() {
             .attr("x2", zoomedXScale(pointMap[p2].x))
             .attr("y2", zoomedYScale(pointMap[p2].y))
             .attr("stroke", colors[pointMap[p1].condition] || "#999")
-            .attr("stroke-width", 6)
+            .attr("stroke-width", 2)
             .attr("opacity", 0.95);
         }
       });
@@ -336,13 +327,13 @@ export default function WingCoordinates() {
     svg.call(zoom);
 
     // Condition Filter Legend with Gradient Bars
-    const legendX = width - 120;
-    const legendY = margin.top;
+    const legendX = 60;
+    const legendY = margin.top + 25;
 
     mainGroup.append("text")
       .attr("x", legendX)
-      .attr("y", legendY - 6)
-      .style("font-size", "12px")
+      .attr("y", legendY - 12)
+      .style("font-size", "14px")
       .style("font-weight", "bold")
       .text("Condition");
 
@@ -402,18 +393,11 @@ export default function WingCoordinates() {
 
     // Instructions
     mainGroup.append("text")
-      .attr("x", width - 120)
-      .attr("y", height - 36)
-      .style("font-size", "9px")
-      .style("fill", "#666")
-      .text("Click: select wings");
-
-    mainGroup.append("text")
-      .attr("x", width - 120)
-      .attr("y", height - 27)
-      .style("font-size", "9px")
-      .style("fill", "#666")
-      .text("Scroll: zoom • Drag: pan");
+      .attr("x", 40)
+      .attr("y", height - 30)
+      .style("font-size", "14px")
+      .style("fill", "#000")
+      .text("Click to map wing  •  Scroll to zoom  •  Drag to pan");
 
     return () => {
       tooltip.remove();
