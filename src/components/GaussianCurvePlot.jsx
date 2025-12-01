@@ -162,7 +162,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
-      .text("Distance (x)");
+      .text("Distance from Peak");
 
     mainGroup
       .append("text")
@@ -181,7 +181,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "14px")
       .style("font-weight", "bold")
-      .text("Normalized Gradient Profiles");
+      .text("Gaussian Curves of Profiles");
 
     const visibleCurves = curves.filter((curve) =>
       visibleConditions[curve[0].condition]
@@ -228,25 +228,8 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
         .attr("opacity", 0.9);
     }
 
-    // Add equation annotation
-    mainGroup
-      .append("text")
-      .attr("x", margin.left + plotWidth + 24)
-      .attr("y", margin.top + 120)
-      .style("font-size", "10px")
-      .style("font-family", "monospace")
-      .text("y = A + (B-A) ×");
-    
-    mainGroup
-      .append("text")
-      .attr("x", margin.left + plotWidth + 24)
-      .attr("y", margin.top + 132)
-      .style("font-size", "10px")
-      .style("font-family", "monospace")
-      .text("exp(-(x-C)²/(2×D²))");
-
     // Legend
-    const legendX = margin.left + plotWidth + 24;
+    const legendX = margin.left + 35;
     const legendY = margin.top + 24;
 
     mainGroup
@@ -308,7 +291,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
         <div
           style={{ textAlign: "center", marginTop: "20px", color: "#666" }}
         >
-          Loading normalized gradient profiles...
         </div>
       )}
     </div>

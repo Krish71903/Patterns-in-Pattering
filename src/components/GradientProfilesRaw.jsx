@@ -129,7 +129,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
-      .text("Distance Relative to Peak");
+      .text("Actual Distance Relative to Peak");
 
     mainGroup
       .append("text")
@@ -139,7 +139,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
-      .text("Relative intensity");
+      .text("Relative Intensity");
 
     mainGroup
       .append("text")
@@ -148,7 +148,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "14px")
       .style("font-weight", "bold")
-      .text("Gradient Profiles");
+      .text("Raw Gradient Profiles");
 
     const visibleCurves = curves.filter((curve) =>
       visibleConditions[curve[0].condition]
@@ -195,8 +195,8 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     }
 
     // legend
-    const legendX = margin.left + plotWidth + 24;
-    const legendY = margin.top + 24;
+    const legendX = margin.left + 35;
+    const legendY = margin.top + plotHeight - 55;
 
     mainGroup
       .append("text")
