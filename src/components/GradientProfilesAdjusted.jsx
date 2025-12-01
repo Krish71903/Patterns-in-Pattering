@@ -46,11 +46,11 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
               disc: discId,
               condition: condLabel,
               area,
-              relativedistance: +r.relativedistance,
-              value: +r.value / maxVal
+              value: +r.value / maxVal,
+              adjreldistance: +r.adjreldistance
             }))
-            .filter((p) => !isNaN(p.relativedistance) && !isNaN(p.value))
-            .sort((a, b) => a.relativedistance - b.relativedistance);
+            .filter((p) => !isNaN(p.adjreldistance) && !isNaN(p.value))
+            .sort((a, b) => a.adjreldistance - b.adjreldistance);
 
           if (curvePoints.length > 1) {
             allCurves.push(curvePoints);
@@ -81,7 +81,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     const mainGroup = svg.append("g");
 
     const allPoints = curves.flat();
-    const xExtent = d3.extent(allPoints, (d) => d.relativedistance);
+    const xExtent = d3.extent(allPoints, (d) => d.adjreldistance);
 
     const xScale = d3
       .scaleLinear()
@@ -156,7 +156,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
 
     const lineGen = d3
       .line()
-      .x((d) => xScale(d.relativedistance))
+      .x((d) => xScale(d.adjreldistance))
       .y((d) => yScale(d.value))
       .curve(d3.curveBasis);
 

@@ -129,7 +129,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
-      .text("Actual Distance Relative to Peak");
+      .text("Actual Distance Relative to Peak (µm)");
 
     mainGroup
       .append("text")

@@ -18,9 +18,9 @@ function mapCondition(raw) {
   return "standard";
 }
 
-// Gaussian function: y = A + (B-A) * exp(-((x-C)²)/(2*D²))
+// Gaussian function: y = B * exp(-((x-C)²)/(2*D²))
 function gaussianFunction(x, A, B, C, D) {
-  return A + (B - A) * Math.exp(-((x - C) ** 2) / (2 * D ** 2));
+  return A + (1 - A) * Math.exp(-((x - C) ** 2) / (2 * D ** 2));
 }
 
 // Generate points for the Gaussian curve
@@ -162,7 +162,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
-      .text("Distance from Peak");
+      .text("Distance from Peak (µm)");
 
     mainGroup
       .append("text")
