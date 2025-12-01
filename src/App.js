@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import WingDiscVsD from "./components/WingDiscVsD";
 import GradientProfilesRaw from "./components/GradientProfilesRaw";
 import GradientProfilesAdjusted from "./components/GradientProfilesAdjusted";
+import GaussianCurvePlot from "./components/GaussianCurvePlot";
 import WingMappings from "./components/WingMappings";
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
         <WingDiscVsD onSelectionChange={setSelectedDiscs} />
         <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
         <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
+        <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
         <WingMappings />
       </div>
     </div>
