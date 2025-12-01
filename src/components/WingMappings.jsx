@@ -24,6 +24,30 @@ const connections = [
   [10, 14], [11, 15], [12, 13], [13, 14], [14, 15]
 ];
 
+// Helper function to calculate point color
+const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange) => {
+  let normalizedSize;
+  if (filterMode === "percentile") {
+    // Convert to percentile within condition
+    const stats = centroidStats[d.condition];
+    if (stats && stats.values.length > 0) {
+      const index = stats.values.findIndex(v => v >= d.centroidSize);
+      normalizedSize = index === -1 ? 1 : index / stats.values.length;
+    } else {
+      normalizedSize = 0;
+    }
+  } else {
+    // Use absolute value normalized to overall range
+    const overallMin = overallCentroidRange[0];
+    const overallMax = overallCentroidRange[1];
+    normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
+  }
+  
+  // Map to darker half (0.5 to 1.0)
+  const gradientPosition = 0.5 + (normalizedSize * 0.5);
+  return gradientScales[d.condition](gradientPosition);
+};
+
 export default function WingCoordinates() {
   const svgRef = useRef();
   const [data, setData] = useState([]);
@@ -138,19 +162,6 @@ export default function WingCoordinates() {
       if (!stats || stats.values.length === 0) return 0;
       const index = stats.values.findIndex(v => v >= value);
       return index === -1 ? 1 : index / stats.values.length;
-    }
-  };
-
-  const convertFromPercentile = (percentile, condition = "overall") => {
-    if (condition === "overall") {
-      if (allCentroidValues.length === 0) return 0;
-      const index = Math.floor(percentile * (allCentroidValues.length - 1));
-      return allCentroidValues[index] || allCentroidValues[0] || 0;
-    } else {
-      const stats = centroidStats[condition];
-      if (!stats || stats.values.length === 0) return 0;
-      const index = Math.floor(percentile * (stats.values.length - 1));
-      return stats.values[index] || stats.values[0] || 0;
     }
   };
 
@@ -334,7 +345,7 @@ export default function WingCoordinates() {
       connections.forEach(([p1, p2]) => {
         if (pointMap[p1] && pointMap[p2]) {
           // Get color from first point (matches point color)
-          const pointColor = getPointColor(pointMap[p1]);
+          const pointColor = calculatePointColor(pointMap[p1], filterMode, centroidStats, overallCentroidRange);
           mainGroup.append("line")
             .attr("x1", zoomedXScale(pointMap[p1].x))
             .attr("y1", zoomedYScale(pointMap[p1].y))
@@ -370,24 +381,6 @@ export default function WingCoordinates() {
       .style("pointer-events", "none")
       .style("font-size", "12px")
       .style("opacity", 0);
-
-    // Get color based on centroid size and condition - using darker half of gradient (0.5 to 1.0)
-    const getPointColor = (d) => {
-      let normalizedSize;
-      if (filterMode === "percentile") {
-        normalizedSize = convertToPercentile(d.centroidSize, d.condition);
-      } else {
-        const stats = centroidStats[d.condition];
-        if (stats && stats.min !== stats.max) {
-          normalizedSize = (d.centroidSize - stats.min) / (stats.max - stats.min);
-        } else {
-          normalizedSize = (d.centroidSize - overallCentroidRange[0]) / (overallCentroidRange[1] - overallCentroidRange[0]);
-        }
-      }
-      // Map to darker half (0.5 to 1.0)
-      const gradientPosition = 0.5 + (normalizedSize * 0.5);
-      return gradientScales[d.condition](gradientPosition);
-    };
 
     // Draw points
     const points = mainGroup.selectAll("g.point")
@@ -448,8 +441,8 @@ export default function WingCoordinates() {
     // Add circles for points with gradient colors - stroke matches fill for selected
     points.append("circle")
       .attr("r", 4)
-      .attr("fill", d => getPointColor(d))
-      .attr("stroke", d => selectedIds.has(d.id) ? getPointColor(d) : "#fff")
+      .attr("fill", d => calculatePointColor(d, filterMode, centroidStats, overallCentroidRange))
+      .attr("stroke", d => selectedIds.has(d.id) ? calculatePointColor(d, filterMode, centroidStats, overallCentroidRange) : "#fff")
       .attr("stroke-width", d => selectedIds.has(d.id) ? 2 : 1);
 
     // Add letters for points
