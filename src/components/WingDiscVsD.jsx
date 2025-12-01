@@ -25,6 +25,31 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     cold: true
   });
   const [selectedDiscIDs, setSelectedDiscIDs] = useState([]);
+  const [brushSelection, setBrushSelection] = useState(null);
+
+  // Add CSS for brush styling
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .brush .selection {
+        fill: #4A90E2 !important;
+        fill-opacity: 0.2 !important;
+        stroke: #4A90E2 !important;
+        stroke-width: 2px !important;
+        stroke-dasharray: 5,5 !important;
+      }
+      .brush .handle {
+        fill: #4A90E2 !important;
+        stroke: #4A90E2 !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   // ------------------------------------------------------------
   // Load CSV data
@@ -164,14 +189,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .style("font-weight", "bold")
       .text("Lambda");
 
-    mainGroup
-      .append("text")
-      .attr("x", scatterMargin.left + scatterSize / 2)
-      .attr("y", 24)
-      .attr("text-anchor", "middle")
-      .style("font-size", "14px")
-      .style("font-weight", "bold")
-      .text("Wing Disc Area vs Lambda");
+    // Title is now in the JSX return statement
 
     // Shapes for conditions
     const symbolGenerator = d3.symbol().size(30);
@@ -239,36 +257,76 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         tooltip.style("opacity", 0);
       });
 
-    // ------- BRUSH (X-axis only, Area) -------
+    // ------- 2D BRUSH (X and Y axes) -------
+    const brushGroup = mainGroup.append("g").attr("class", "brush");
+    
     const brush = d3
-      .brushX()
+      .brush()
       .extent([
         [scatterMargin.left, scatterMargin.top],
         [scatterMargin.left + scatterSize, scatterMargin.top + scatterSize]
       ])
-      .on("brush end", (event) => {
+      .on("brush", (event) => {
         const sel = event.selection;
 
         if (!sel) {
           // Clear selection
           setSelectedDiscIDs([]);
+          setBrushSelection(null);
           onSelectionChange([]);
           return;
         }
 
-        const [x0, x1] = sel;
+        const [[x0, y0], [x1, y1]] = sel;
         const areaMin = xScale.invert(x0);
         const areaMax = xScale.invert(x1);
+        const dMin = yScale.invert(y1); // Note: y is inverted
+        const dMax = yScale.invert(y0);
 
         const selected = filteredData
-          .filter((d) => d.area >= areaMin && d.area <= areaMax)
+          .filter((d) => 
+            d.area >= areaMin && 
+            d.area <= areaMax &&
+            d.D >= dMin &&
+            d.D <= dMax
+          )
           .map((d) => d.disc);
 
         setSelectedDiscIDs(selected);
+        setBrushSelection({
+          area: [areaMin, areaMax],
+          d: [dMin, dMax]
+        });
         onSelectionChange(selected);
+
+        // Style the brush selection to be visible
+        brushGroup.selectAll(".selection")
+          .attr("fill", "#4A90E2")
+          .attr("fill-opacity", 0.2)
+          .attr("stroke", "#4A90E2")
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "5,5");
+      })
+      .on("end", (event) => {
+        // Ensure styling persists after brush ends
+        if (event.selection) {
+          brushGroup.selectAll(".selection")
+            .attr("fill", "#4A90E2")
+            .attr("fill-opacity", 0.2)
+            .attr("stroke", "#4A90E2")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5,5");
+        } else {
+          setBrushSelection(null);
+        }
       });
 
-    mainGroup.append("g").attr("class", "brush").call(brush);
+    brushGroup.call(brush);
+
+    // Style the brush handles
+    brushGroup.selectAll(".handle")
+      .attr("fill", "#4A90E2")
+      .attr("stroke", "#4A90E2");
 
     // Top histogram (by condition)
     Object.entries(colors).forEach(([condition, color]) => {
@@ -441,11 +499,30 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     setSelectedDiscProfile(discProfile);
   }, [selectedDisc, profileData, scatterData]);
 
+  // Format range display
+  const formatRange = (range) => {
+    if (!range) return null;
+    return `${range[0].toFixed(2)} - ${range[1].toFixed(2)}`;
+  };
+
   // ------------------------------------------------------------
   // Render
   // ------------------------------------------------------------
   return (
     <div style={{ padding: "10px", backgroundColor: "#fff" }}>
+      <h2>Wing Disc Area vs Lambda</h2>
+      {brushSelection && (
+        <div style={{ 
+          marginBottom: "10px", 
+          padding: "8px", 
+          backgroundColor: "#f8f9fa", 
+          borderRadius: "5px",
+          fontSize: "14px"
+        }}>
+          <strong>Area range:</strong> {formatRange(brushSelection.area)}<br />
+          <strong>D range:</strong> {formatRange(brushSelection.d)}
+        </div>
+      )}
       <svg
         ref={svgRef}
         width={600}
