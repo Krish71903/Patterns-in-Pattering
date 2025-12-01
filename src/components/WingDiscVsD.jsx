@@ -37,10 +37,16 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         stroke: #4A90E2 !important;
         stroke-width: 2px !important;
         stroke-dasharray: 5,5 !important;
+        pointer-events: none !important;
       }
       .brush .handle {
         fill: #4A90E2 !important;
         stroke: #4A90E2 !important;
+      }
+      .brush .overlay {
+        fill: none !important;
+        pointer-events: all !important;
+        cursor: crosshair !important;
       }
     `;
     document.head.appendChild(style);
@@ -134,8 +140,18 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         .style("padding", "6px 8px")
         .style("border-radius", "4px")
         .style("font-size", "11px")
-        .style("opacity", 0);
+        .style("opacity", 0)
+        .style("z-index", "1000")
+        .style("white-space", "nowrap");
     }
+
+    // Throttle tooltip position updates for better performance
+    let lastTooltipUpdate = 0;
+    const tooltipUpdateThrottle = 16; // ~60fps
+    
+    // Cache tooltip HTML to avoid regenerating on every mousemove
+    let cachedTooltipHtml = null;
+    let cachedDiscId = null;
 
     // Filter data by visible conditions
     const filteredData = scatterData.filter(
@@ -191,8 +207,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
 
     // Title is now in the JSX return statement
 
-    // Shapes for conditions
-    const symbolGenerator = d3.symbol().size(30);
+    // Shapes for conditions - slightly larger for better hover accuracy
+    const symbolGenerator = d3.symbol().size(40);
     const shapeMap = {
       standard: d3.symbolCircle,
       hypoxia: d3.symbolTriangle,
@@ -203,6 +219,70 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const selectedSet = new Set(selectedDiscIDs);
 
     // Scatter points with tooltip functionality
+    // First create invisible larger hit areas for better hover accuracy
+    // These are placed BEFORE the brush so they don't interfere with brushing
+    const hitAreaGroup = mainGroup.append("g").attr("class", "hit-areas");
+    hitAreaGroup
+      .selectAll("circle.hit-area")
+      .data(filteredData)
+      .join("circle")
+      .attr("class", "hit-area")
+      .attr("cx", (d) => xScale(d.area))
+      .attr("cy", (d) => yScale(d.D))
+      .attr("r", 8) // Larger hit area for easier hovering
+      .attr("fill", "transparent")
+      .attr("stroke", "none")
+      .style("pointer-events", "all")
+      .style("cursor", "pointer")
+      // click: select disc and show profile
+      .on("click", function (event, d) {
+        // Only handle click if not brushing
+        if (event.defaultPrevented) return;
+        event.stopPropagation();
+        
+        if (d.disc === selectedDisc) {
+          // deselect
+          setSelectedDisc(null);
+          setSelectedDiscInfo(null);
+          setSelectedDiscProfile([]);
+        } else {
+          // select
+          setSelectedDisc(d.disc);
+        }
+      })
+      // hover: show tooltip on hit area
+      .on("mouseover", function (event, d) {
+        // Only regenerate HTML if disc changed
+        if (cachedDiscId !== d.disc) {
+          cachedTooltipHtml = `Disc: ${d.disc}<br>Area: ${d.area.toFixed(2)}<br>Lambda: ${d.D.toFixed(2)}<br>Condition: ${d.condition}`;
+          cachedDiscId = d.disc;
+        }
+        
+        tooltip
+          .style("opacity", 1)
+          .html(cachedTooltipHtml)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");
+        
+        lastTooltipUpdate = performance.now();
+      })
+      .on("mousemove", function(event) {
+        const now = performance.now();
+        // Throttle position updates only, not content
+        if (now - lastTooltipUpdate < tooltipUpdateThrottle) return;
+        lastTooltipUpdate = now;
+        
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 10) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.style("opacity", 0);
+        cachedDiscId = null;
+        cachedTooltipHtml = null;
+      });
+
+    // Then create the visible scatter points
     mainGroup
       .selectAll("path.scatter")
       .data(filteredData)
@@ -221,41 +301,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         if (!hasSelection) return 0.7;
         return selectedSet.has(d.disc) ? 0.9 : 0.15;
       })
-      .style("cursor", "pointer")
-      // click: select disc and show profile
-      .on("click", function (event, d) {
-        console.log("Clicked disc ID:", d.disc);
-
-        if (d.disc === selectedDisc) {
-          // deselect
-          setSelectedDisc(null);
-          setSelectedDiscInfo(null);
-          setSelectedDiscProfile([]);
-        } else {
-          // select
-          setSelectedDisc(d.disc);
-        }
-      })
-      // hover: show tooltip
-      .on("mouseover", function (event, d) {
-        tooltip
-          .style("opacity", 1)
-          .html(
-            `Disc: ${d.disc}<br>Area: ${d.area.toFixed(
-              2
-            )}<br>Lambda: ${d.D.toFixed(2)}<br>Condition: ${d.condition}`
-          )
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 10) + "px");
-      })
-      .on("mousemove", function(event) {
-        tooltip
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 10) + "px");
-      })
-      .on("mouseout", function() {
-        tooltip.style("opacity", 0);
-      });
+      .style("pointer-events", "none") // Let hit area handle events
+      .style("cursor", "pointer");
 
     // ------- 2D BRUSH (X and Y axes) -------
     const brushGroup = mainGroup.append("g").attr("class", "brush");
@@ -266,6 +313,18 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         [scatterMargin.left, scatterMargin.top],
         [scatterMargin.left + scatterSize, scatterMargin.top + scatterSize]
       ])
+      .on("start", (event) => {
+        // Prevent click events on scatter points when brushing starts
+        if (event.sourceEvent) {
+          event.sourceEvent.preventDefault();
+          event.sourceEvent.stopPropagation();
+        }
+        // Hide tooltip when brushing starts
+        tooltip.style("opacity", 0);
+        // Disable hit area interactions temporarily
+        hitAreaGroup.selectAll("circle.hit-area")
+          .style("pointer-events", "none");
+      })
       .on("brush", (event) => {
         const sel = event.selection;
 
@@ -278,10 +337,13 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         }
 
         const [[x0, y0], [x1, y1]] = sel;
-        const areaMin = xScale.invert(x0);
-        const areaMax = xScale.invert(x1);
-        const dMin = yScale.invert(y1); // Note: y is inverted
-        const dMax = yScale.invert(y0);
+        // Ensure we get min/max correctly regardless of drag direction for X
+        const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
+        const areaMax = Math.max(xScale.invert(x0), xScale.invert(x1));
+        // Y axis is inverted: top (smaller y screen coord) = larger D value
+        // So y0 (top) maps to dMax, y1 (bottom) maps to dMin
+        const dMin = yScale.invert(y1); // bottom of selection = smaller D
+        const dMax = yScale.invert(y0); // top of selection = larger D
 
         const selected = filteredData
           .filter((d) => 
@@ -299,7 +361,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         });
         onSelectionChange(selected);
 
-        // Style the brush selection to be visible
+        // Apply styling during brushing to ensure rectangle is visible
         brushGroup.selectAll(".selection")
           .attr("fill", "#4A90E2")
           .attr("fill-opacity", 0.2)
@@ -308,25 +370,63 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           .attr("stroke-dasharray", "5,5");
       })
       .on("end", (event) => {
-        // Ensure styling persists after brush ends
-        if (event.selection) {
+        if (!event.selection) {
+          setBrushSelection(null);
+        } else {
+          // Ensure styling persists after brush ends
           brushGroup.selectAll(".selection")
             .attr("fill", "#4A90E2")
             .attr("fill-opacity", 0.2)
             .attr("stroke", "#4A90E2")
             .attr("stroke-width", 2)
             .attr("stroke-dasharray", "5,5");
-        } else {
-          setBrushSelection(null);
         }
+        // Re-enable hit area interactions after brush ends
+        hitAreaGroup.selectAll("circle.hit-area")
+          .style("pointer-events", "all");
+        // Allow clicks again after brush ends
+        event.sourceEvent?.stopPropagation();
       });
 
     brushGroup.call(brush);
 
-    // Style the brush handles
+    // Restore brush selection if it exists
+    if (brushSelection && brushSelection.area && brushSelection.d) {
+      const [areaMin, areaMax] = brushSelection.area;
+      const [dMin, dMax] = brushSelection.d;
+      const x0 = xScale(areaMin);
+      const x1 = xScale(areaMax);
+      const y0 = yScale(dMax); // dMax maps to top (smaller y screen coord)
+      const y1 = yScale(dMin); // dMin maps to bottom (larger y screen coord)
+      
+      // Only restore if the selection is still valid
+      if (isFinite(x0) && isFinite(x1) && isFinite(y0) && isFinite(y1)) {
+        brush.move(brushGroup, [[x0, y0], [x1, y1]]);
+      }
+    }
+
+    // Style the brush handles and selection rectangle immediately
     brushGroup.selectAll(".handle")
       .attr("fill", "#4A90E2")
       .attr("stroke", "#4A90E2");
+    
+    // Apply styling to selection rectangle - do it synchronously and also after a brief delay
+    brushGroup.selectAll(".selection")
+      .attr("fill", "#4A90E2")
+      .attr("fill-opacity", 0.2)
+      .attr("stroke", "#4A90E2")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5,5");
+    
+    // Also apply after a brief delay to catch any async updates
+    setTimeout(() => {
+      brushGroup.selectAll(".selection")
+        .attr("fill", "#4A90E2")
+        .attr("fill-opacity", 0.2)
+        .attr("stroke", "#4A90E2")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "5,5");
+    }, 10);
 
     // Top histogram (by condition)
     Object.entries(colors).forEach(([condition, color]) => {
@@ -466,6 +566,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     visibleConditions,
     selectedDisc,
     selectedDiscIDs,
+    brushSelection,
     onSelectionChange
   ]);
 
