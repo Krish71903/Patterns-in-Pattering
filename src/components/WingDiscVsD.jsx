@@ -243,9 +243,92 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const hasSelection = selectedDiscIDs.length > 0;
     const selectedSet = new Set(selectedDiscIDs);
 
+    // ------- 2D BRUSH (X and Y axes) -------
+    // Create brush FIRST so its overlay is on top and can capture all events
+    const brushGroup = mainGroup.append("g").attr("class", "brush");
+    
+    const brush = d3
+      .brush()
+      .extent([
+        [scatterMargin.left, scatterMargin.top],
+        [scatterMargin.left + scatterSize, scatterMargin.top + scatterSize]
+      ])
+      .on("start", (event) => {
+        // Prevent click events on scatter points when brushing starts
+        if (event.sourceEvent) {
+          event.sourceEvent.preventDefault();
+          event.sourceEvent.stopPropagation();
+        }
+        // Hide tooltip when brushing starts
+        tooltip.style("opacity", 0);
+        // Completely disable hit area interactions during brushing
+        hitAreaGroup.style("pointer-events", "none");
+      })
+      .on("brush", (event) => {
+        // Only update visual styling during brush - D3 handles rectangle movement
+        // Don't update state here to avoid re-renders that cause lag
+        const sel = event.selection;
+        if (sel) {
+          // Apply styling during brushing to ensure rectangle is visible
+          brushGroup.selectAll(".selection")
+            .attr("fill", "#4A90E2")
+            .attr("fill-opacity", 0.2)
+            .attr("stroke", "#4A90E2")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5,5");
+        }
+      })
+      .on("end", (event) => {
+        const sel = event.selection;
+        
+        if (!sel) {
+          // Clear selection
+          setSelectedDiscIDs([]);
+          setBrushSelection(null);
+          onSelectionChange([]);
+        } else {
+          // Calculate selection only when brush ends
+          const [[x0, y0], [x1, y1]] = sel;
+          // Ensure we get min/max correctly regardless of drag direction
+          const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
+          const areaMax = Math.max(xScale.invert(x0), xScale.invert(x1));
+          // Y axis is inverted: top (smaller y screen coord) = larger D value
+          const dMin = Math.min(yScale.invert(y0), yScale.invert(y1));
+          const dMax = Math.max(yScale.invert(y0), yScale.invert(y1));
+
+          const selected = filteredData
+            .filter((d) => 
+              d.area >= areaMin && 
+              d.area <= areaMax &&
+              d.D >= dMin &&
+              d.D <= dMax
+            )
+            .map((d) => d.disc);
+
+          setSelectedDiscIDs(selected);
+          setBrushSelection({
+            area: [areaMin, areaMax],
+            d: [dMin, dMax]
+          });
+          onSelectionChange(selected);
+
+          // Ensure styling persists after brush ends
+          brushGroup.selectAll(".selection")
+            .attr("fill", "#4A90E2")
+            .attr("fill-opacity", 0.2)
+            .attr("stroke", "#4A90E2")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5,5");
+        }
+        // Re-enable hit area interactions after brush ends
+        hitAreaGroup.style("pointer-events", "all");
+      });
+
+    brushGroup.call(brush);
+
     // Scatter points with tooltip functionality
-    // First create invisible larger hit areas for better hover accuracy
-    // These are placed BEFORE the brush so they don't interfere with brushing
+    // Create invisible larger hit areas for better hover accuracy
+    // These are placed AFTER the brush so brush overlay is on top
     const hitAreaGroup = mainGroup.append("g").attr("class", "hit-areas");
     hitAreaGroup
       .selectAll("circle.hit-area")
@@ -261,8 +344,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .style("cursor", "pointer")
       // click: select disc and show profile
       .on("click", function (event, d) {
-        // Only handle click if not brushing
-        if (event.defaultPrevented) return;
         event.stopPropagation();
         
         if (d.disc === selectedDisc) {
@@ -328,92 +409,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       })
       .style("pointer-events", "none") // Let hit area handle events
       .style("cursor", "pointer");
-
-    // ------- 2D BRUSH (X and Y axes) -------
-    const brushGroup = mainGroup.append("g").attr("class", "brush");
-    
-    const brush = d3
-      .brush()
-      .extent([
-        [scatterMargin.left, scatterMargin.top],
-        [scatterMargin.left + scatterSize, scatterMargin.top + scatterSize]
-      ])
-      .on("start", (event) => {
-        // Prevent click events on scatter points when brushing starts
-        if (event.sourceEvent) {
-          event.sourceEvent.preventDefault();
-          event.sourceEvent.stopPropagation();
-        }
-        // Hide tooltip when brushing starts
-        tooltip.style("opacity", 0);
-        // Disable hit area interactions temporarily
-        hitAreaGroup.selectAll("circle.hit-area")
-          .style("pointer-events", "none");
-      })
-      .on("brush", (event) => {
-        const sel = event.selection;
-
-        if (!sel) {
-          // Clear selection
-          setSelectedDiscIDs([]);
-          setBrushSelection(null);
-          onSelectionChange([]);
-          return;
-        }
-
-        const [[x0, y0], [x1, y1]] = sel;
-        // Ensure we get min/max correctly regardless of drag direction for X
-        const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
-        const areaMax = Math.max(xScale.invert(x0), xScale.invert(x1));
-        // Y axis is inverted: top (smaller y screen coord) = larger D value
-        // So y0 (top) maps to dMax, y1 (bottom) maps to dMin
-        const dMin = yScale.invert(y1); // bottom of selection = smaller D
-        const dMax = yScale.invert(y0); // top of selection = larger D
-
-        const selected = filteredData
-          .filter((d) => 
-            d.area >= areaMin && 
-            d.area <= areaMax &&
-            d.D >= dMin &&
-            d.D <= dMax
-          )
-          .map((d) => d.disc);
-
-        setSelectedDiscIDs(selected);
-        setBrushSelection({
-          area: [areaMin, areaMax],
-          d: [dMin, dMax]
-        });
-        onSelectionChange(selected);
-
-        // Apply styling during brushing to ensure rectangle is visible
-        brushGroup.selectAll(".selection")
-          .attr("fill", "#4A90E2")
-          .attr("fill-opacity", 0.2)
-          .attr("stroke", "#4A90E2")
-          .attr("stroke-width", 2)
-          .attr("stroke-dasharray", "5,5");
-      })
-      .on("end", (event) => {
-        if (!event.selection) {
-          setBrushSelection(null);
-        } else {
-          // Ensure styling persists after brush ends
-          brushGroup.selectAll(".selection")
-            .attr("fill", "#4A90E2")
-            .attr("fill-opacity", 0.2)
-            .attr("stroke", "#4A90E2")
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "5,5");
-        }
-        // Re-enable hit area interactions after brush ends
-        hitAreaGroup.selectAll("circle.hit-area")
-          .style("pointer-events", "all");
-        // Allow clicks again after brush ends
-        event.sourceEvent?.stopPropagation();
-      });
-
-    brushGroup.call(brush);
 
     // Restore brush selection if it exists
     if (brushSelection && brushSelection.area && brushSelection.d) {

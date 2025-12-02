@@ -35,47 +35,84 @@ function App() {
 
       {/* Main Layout: Left Half and Right Half */}
       <div style={{
-        display: "flex",
-        gap: "15px",
-        width: "100%"
+        display: "grid",
+        gridTemplateColumns: "1.2fr 0.8fr",
+        gap: "12px",
+        width: "100%",
+        maxWidth: "100%",
+        minHeight: "calc(100vh - 180px)"
       }}>
-        {/* Left Half: Wing Disc Area Plot + 3 Profile Plots */}
+        {/* Left Panel */}
         <div style={{
-          flex: "0 0 50%",
           display: "flex",
           flexDirection: "column",
-          gap: "15px",
-          alignItems: "center"
+          gap: "10px"
         }}>
-          {/* Wing Disc Area vs Lambda Plot */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          {/* Top: Main scatter plot */}
+          <div style={{ 
+            flex: "0 0 auto",
+            backgroundColor: "#fff",
+            borderRadius: "8px",
+            padding: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
             <WingDiscVsD onSelectionChange={setSelectedDiscs} />
           </div>
           
-          {/* 3 Profile Plots Horizontally */}
+          {/* Bottom: Three smaller plots in a row */}
           <div style={{
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
             gap: "10px",
-            width: "100%"
+            flex: "0 0 auto"
           }}>
-            <div style={{ flex: "1", minWidth: 0 }}>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
               <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
             </div>
-            <div style={{ flex: "1", minWidth: 0 }}>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
               <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
             </div>
-            <div style={{ flex: "1", minWidth: 0 }}>
+            <div style={{ 
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              overflow: "hidden"
+            }}>
               <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
             </div>
           </div>
         </div>
 
-        {/* Right Half: Wing Coordinate Landmarks */}
+        {/* Right Panel */}
         <div style={{
-          flex: "0 0 50%",
-          minWidth: 0
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
         }}>
-          <WingMappings />
+          {/* Wing mapping plot - includes its own controls */}
+          <div style={{ 
+            flex: "1 1 auto",
+            backgroundColor: "#fff",
+            borderRadius: "8px",
+            padding: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            minHeight: "600px"
+          }}>
+            <WingMappings />
+          </div>
         </div>
       </div>
     </div>
