@@ -24,7 +24,7 @@ const connections = [
   [10, 14], [11, 15], [12, 13], [13, 14], [14, 15]
 ];
 
-// Helper function to calculate point color
+// Helper function to calculate point color (fixed to use only darker half)
 const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange) => {
   let normalizedSize;
   if (filterMode === "percentile") {
@@ -43,14 +43,13 @@ const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange)
     normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
   }
   
-  // Map to darker half (0.5 to 1.0)
-  const gradientPosition = 0.5 + (normalizedSize * 0.5);
+  // Map to darker half (0.5 to 1.0) - FIXED: Clamp and map properly
+  const gradientPosition = Math.max(0.5, Math.min(1.0, 0.5 + (normalizedSize * 0.5)));
   return gradientScales[d.condition](gradientPosition);
 };
 
 export default function WingCoordinates() {
   const svgRef = useRef();
-  const containerRef = useRef();
   const [data, setData] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [visibleConditions, setVisibleConditions] = useState({
@@ -58,7 +57,6 @@ export default function WingCoordinates() {
     hypoxia: true,
     cold: true
   });
-  const [dimensions, setDimensions] = useState({ width: 900, height: 800 });
   
   // Filter states with percentile/absolute mode
   const [filterMode, setFilterMode] = useState("percentile"); // "percentile" or "absolute"
@@ -85,27 +83,6 @@ export default function WingCoordinates() {
 
   // Zoom state
   const [transform, setTransform] = useState(d3.zoomIdentity);
-
-  // Handle responsive sizing
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        const width = containerWidth;
-        const height = width * 0.8; // Maintain aspect ratio
-        setDimensions({ width, height });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    const timeoutId = setTimeout(updateDimensions, 100);
-    
-    return () => {
-      window.removeEventListener('resize', updateDimensions);
-      clearTimeout(timeoutId);
-    };
-  }, []);
 
   // Load data and calculate statistics
   useEffect(() => {
@@ -285,6 +262,20 @@ export default function WingCoordinates() {
     }
   };
 
+  // Helper function to get gradient stops for darker half only
+  const getDarkerHalfGradientStops = (condition) => {
+    // Create 10 stops from 0.5 to 1.0
+    const stops = d3.range(0, 1.01, 0.1); // 0, 0.1, 0.2, ..., 1.0
+    return stops.map(stop => {
+      // Map 0-1 to 0.5-1.0 for the gradient position
+      const gradientPosition = 0.5 + (stop * 0.5);
+      return {
+        offset: stop * 100,
+        color: gradientScales[condition](gradientPosition)
+      };
+    });
+  };
+
   useEffect(() => {
     const filteredData = getFilteredData();
     if (filteredData.length === 0) return;
@@ -292,8 +283,8 @@ export default function WingCoordinates() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = dimensions.width;
-    const height = dimensions.height;
+    const width = 600;
+    const height = 500;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
@@ -356,6 +347,28 @@ export default function WingCoordinates() {
       .attr("text-anchor", "middle")
       .style("font-size", "10px")
       .text("Y Coordinate");
+
+    // Create gradients for each condition (darker half only)
+    const defs = svg.append("defs");
+    
+    Object.keys(gradientScales).forEach(condition => {
+      const gradientId = `gradient-${condition}`;
+      
+      const gradient = defs.append("linearGradient")
+        .attr("id", gradientId)
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "0%");
+
+      // Create gradient stops for darker half (0.5 to 1.0)
+      const stops = getDarkerHalfGradientStops(condition);
+      gradient.selectAll("stop")
+        .data(stops)
+        .enter().append("stop")
+        .attr("offset", d => `${d.offset}%`)
+        .attr("stop-color", d => d.color);
+    });
 
     // Draw connections for ALL selected IDs with matching stroke colors
     Array.from(selectedIds).forEach(selectedId => {
@@ -520,21 +533,9 @@ export default function WingCoordinates() {
         .attr("stroke", "#333")
         .attr("stroke-width", 1);
 
-      // Smooth gradient bar (darker half: 0.5 to 1.0)
+      // Gradient bar using the pre-defined gradient
       const gradientId = `gradient-${condition}`;
       
-      const defs = svg.append("defs");
-      const gradient = defs.append("linearGradient")
-        .attr("id", gradientId)
-        .attr("x1", "-60%")
-        .attr("x2", "100%");
-
-      gradient.selectAll("stop")
-        .data(d3.range(0, 1.01, 0.1))
-        .enter().append("stop")
-        .attr("offset", d => `${d * 100}%`)
-        .attr("stop-color", d => gradientScales[condition](0.5 + d * 0.5));
-
       // Gradient bar rectangle
       legendItem.append("rect")
         .attr("x", 5)
@@ -564,7 +565,7 @@ export default function WingCoordinates() {
     return () => {
       tooltip.remove();
     };
-  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform, dimensions]);
+  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform]);
 
   // Format display value based on filter mode
   const formatDisplayValue = (value, isBelow = false) => {
@@ -608,7 +609,7 @@ export default function WingCoordinates() {
   };
 
   return (
-    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
+    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
       <h2>Wing Coordinate Landmarks</h2>
       
       {/* Filter Controls */}
@@ -619,7 +620,6 @@ export default function WingCoordinates() {
         borderRadius: "5px",
         border: "1px solid #dee2e6"
       }}>
-        <h3 style={{ margin: "0 0 10px 0", fontSize: "14px" }}>Filter Options</h3>
         
         {/* Filter Mode Toggle */}
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "15px" }}>
@@ -647,22 +647,15 @@ export default function WingCoordinates() {
             </label>
           </div>
         </div>
-
-        {/* Sex Filter */}
-        <div style={{ marginBottom: "10px" }}>
-          <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
-          {['female', 'male'].map(sex => (
-            <label key={sex} style={{ marginRight: "10px", fontSize: "12px" }}>
-              <input
-                type="checkbox"
-                checked={sexFilters[sex]}
-                onChange={(e) => setSexFilters(prev => ({ ...prev, [sex]: e.target.checked }))}
-                style={{ marginRight: "4px" }}
-              />
-              {sex.charAt(0).toUpperCase() + sex.slice(1)}
-            </label>
-          ))}
+        
+        {/* Filter Mode Explanation */}
+        <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+          {filterMode === "percentile" ? 
+            "Percentile mode: Values are relative to each condition's distribution (0% = smallest, 100% = largest per condition)." :
+            "Absolute mode: Values are actual centroid size measurements across all conditions."
+          }
         </div>
+
 
         {/* Centroid Size Filters */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
@@ -854,15 +847,23 @@ export default function WingCoordinates() {
           </div>
         </div>
         
-        {/* Filter Mode Explanation */}
-        <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
-          {filterMode === "percentile" ? 
-            "Percentile mode: Values are relative to each condition's distribution (0% = smallest, 100% = largest per condition)." :
-            "Absolute mode: Values are actual centroid size measurements across all conditions."
-          }
+        {/* Sex Filter */}
+        <div style={{ marginBottom: "10px" }}>
+          <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
+          {['female', 'male'].map(sex => (
+            <label key={sex} style={{ marginRight: "10px", fontSize: "12px" }}>
+              <input
+                type="checkbox"
+                checked={sexFilters[sex]}
+                onChange={(e) => setSexFilters(prev => ({ ...prev, [sex]: e.target.checked }))}
+                style={{ marginRight: "4px" }}
+              />
+              {sex.charAt(0).toUpperCase() + sex.slice(1)}
+            </label>
+          ))}
         </div>
       </div>
-
+      
       <div style={{ color: "green", marginBottom: "10px", fontSize: "12px" }}>
         Showing {getFilteredData().length} of {data.length} landmark points
         {selectedIds.size > 0 && ` • ${selectedIds.size} wing(s) selected`}
@@ -870,16 +871,9 @@ export default function WingCoordinates() {
       
       <svg
         ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ 
-          border: "1px solid #ddd", 
-          backgroundColor: "white",
-          maxWidth: "95%",
-          height: "auto"
-        }}
+        width={600}
+        height={500}
+        style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 
       {/* Selected Wings List */}
@@ -891,7 +885,7 @@ export default function WingCoordinates() {
           borderRadius: "5px",
           border: "1px solid #c8e6c9"
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: "12px" }}>
               <strong>Selected Wings ({selectedIds.size}):</strong> {Array.from(selectedIds).join(", ")}
             </div>
@@ -921,3 +915,4 @@ export default function WingCoordinates() {
     </div>
   );
 }
+        
