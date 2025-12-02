@@ -39,12 +39,35 @@ function generateGaussianCurve(A, B, C, D, xRange = [-50, 50], numPoints = 200) 
 
 export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
   const svgRef = useRef();
+  const containerRef = useRef();
   const [curves, setCurves] = useState([]);
   const [visibleConditions, setVisibleConditions] = useState({
     standard: true,
     hypoxia: true,
     cold: true
   });
+  const [dimensions, setDimensions] = useState({ width: 500, height: 400 });
+
+  // Handle responsive sizing
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const width = Math.max(containerWidth - 20, 300);
+        const height = width * 0.8;
+        setDimensions({ width, height });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    const timeoutId = setTimeout(updateDimensions, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   // Load & preprocess
   useEffect(() => {
@@ -101,8 +124,8 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 600;
-    const height = 500;
+    const width = dimensions.width;
+    const height = dimensions.height;
 
     const margin = { top: 48, right: 48, bottom: 42, left: 54 };
     const plotWidth = 360;
@@ -277,15 +300,21 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
         .style("opacity", visibleConditions[item.label] ? 1 : 0.5)
         .text(item.label);
     });
-  }, [curves, visibleConditions, selectedDiscIDs]);
+  }, [curves, visibleConditions, selectedDiscIDs, dimensions]);
 
   return (
-    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
+    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
       <svg
         ref={svgRef}
-        width={600}
-        height={500}
-        style={{ border: "1px solid #ddd" }}
+        width={dimensions.width}
+        height={dimensions.height}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ 
+          border: "1px solid #ddd",
+          maxWidth: "100%",
+          height: "auto"
+        }}
       />
       {!curves.length && (
         <div

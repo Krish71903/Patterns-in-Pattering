@@ -13,6 +13,7 @@ const colors = {
 
 export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   const svgRef = useRef(null);
+  const containerRef = useRef(null);
 
   const [scatterData, setScatterData] = useState([]);
   const [profileData, setProfileData] = useState([]);
@@ -26,6 +27,30 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   });
   const [selectedDiscIDs, setSelectedDiscIDs] = useState([]);
   const [brushSelection, setBrushSelection] = useState(null);
+  const [dimensions, setDimensions] = useState({ width: 1000, height: 900 });
+
+  // Handle responsive sizing
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const width = Math.max(containerWidth - 20, 400); // Subtract padding, min 400px
+        const height = width * 0.9; // Maintain aspect ratio
+        setDimensions({ width, height });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    
+    // Small delay to ensure container is rendered
+    const timeoutId = setTimeout(updateDimensions, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   // Add CSS for brush styling
   useEffect(() => {
@@ -122,7 +147,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const mainGroup = svg.append("g");
 
     const scatterMargin = { top: 72, right: 120, bottom: 24, left: 60 };
-    const scatterSize = 300;
+    const scatterSize = Math.min(dimensions.width - scatterMargin.left - scatterMargin.right - 50, dimensions.height - scatterMargin.top - scatterMargin.bottom - 50);
     const histWidth = 36;
     const histHeight = 36;
 
@@ -567,7 +592,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     selectedDisc,
     selectedDiscIDs,
     brushSelection,
-    onSelectionChange
+    onSelectionChange,
+    dimensions
   ]);
 
   // ------------------------------------------------------------
@@ -610,7 +636,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   // Render
   // ------------------------------------------------------------
   return (
-    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
+    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
       <h2>Wing Disc Area vs Lambda</h2>
       {brushSelection && (
         <div style={{ 
@@ -626,9 +652,15 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       )}
       <svg
         ref={svgRef}
-        width={600}
-        height={500}
-        style={{ border: "1px solid #ddd" }}
+        width={dimensions.width}
+        height={dimensions.height}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ 
+          border: "1px solid #ddd",
+          maxWidth: "100%",
+          height: "auto"
+        }}
       />
       {scatterData.length === 0 && (
         <div

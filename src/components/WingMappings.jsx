@@ -50,6 +50,7 @@ const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange)
 
 export default function WingCoordinates() {
   const svgRef = useRef();
+  const containerRef = useRef();
   const [data, setData] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [visibleConditions, setVisibleConditions] = useState({
@@ -57,6 +58,7 @@ export default function WingCoordinates() {
     hypoxia: true,
     cold: true
   });
+  const [dimensions, setDimensions] = useState({ width: 900, height: 800 });
   
   // Filter states with percentile/absolute mode
   const [filterMode, setFilterMode] = useState("percentile"); // "percentile" or "absolute"
@@ -83,6 +85,27 @@ export default function WingCoordinates() {
 
   // Zoom state
   const [transform, setTransform] = useState(d3.zoomIdentity);
+
+  // Handle responsive sizing
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const width = Math.max(containerWidth - 20, 500);
+        const height = width * 0.8; // Maintain aspect ratio
+        setDimensions({ width, height });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    const timeoutId = setTimeout(updateDimensions, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   // Load data and calculate statistics
   useEffect(() => {
@@ -269,8 +292,8 @@ export default function WingCoordinates() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 600;
-    const height = 500;
+    const width = dimensions.width;
+    const height = dimensions.height;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
@@ -541,7 +564,7 @@ export default function WingCoordinates() {
     return () => {
       tooltip.remove();
     };
-  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform]);
+  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform, dimensions]);
 
   // Format display value based on filter mode
   const formatDisplayValue = (value, isBelow = false) => {
@@ -585,7 +608,7 @@ export default function WingCoordinates() {
   };
 
   return (
-    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
+    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
       <h2>Wing Coordinate Landmarks</h2>
       
       {/* Filter Controls */}
@@ -847,9 +870,16 @@ export default function WingCoordinates() {
       
       <svg
         ref={svgRef}
-        width={600}
-        height={500}
-        style={{ border: "1px solid #ddd", backgroundColor: "white" }}
+        width={dimensions.width}
+        height={dimensions.height}
+        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ 
+          border: "1px solid #ddd", 
+          backgroundColor: "white",
+          maxWidth: "95%",
+          height: "auto"
+        }}
       ></svg>
 
       {/* Selected Wings List */}

@@ -33,17 +33,50 @@ function App() {
         </p>
       </div>
 
+      {/* Main Layout: Left Half and Right Half */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(600px, 1fr))",
-        gap: "5px",
+        display: "flex",
+        gap: "15px",
         width: "100%"
       }}>
-        <WingDiscVsD onSelectionChange={setSelectedDiscs} />
-        <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
-        <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
-        <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
-        <WingMappings />
+        {/* Left Half: Wing Disc Area Plot + 3 Profile Plots */}
+        <div style={{
+          flex: "0 0 50%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+          alignItems: "center"
+        }}>
+          {/* Wing Disc Area vs Lambda Plot */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <WingDiscVsD onSelectionChange={setSelectedDiscs} />
+          </div>
+          
+          {/* 3 Profile Plots Horizontally */}
+          <div style={{
+            display: "flex",
+            gap: "10px",
+            width: "100%"
+          }}>
+            <div style={{ flex: "1", minWidth: 0 }}>
+              <GradientProfilesRaw selectedDiscIDs={selectedDiscs} />
+            </div>
+            <div style={{ flex: "1", minWidth: 0 }}>
+              <GradientProfilesAdjusted selectedDiscIDs={selectedDiscs} />
+            </div>
+            <div style={{ flex: "1", minWidth: 0 }}>
+              <GaussianCurvePlot selectedDiscIDs={selectedDiscs} />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Half: Wing Coordinate Landmarks */}
+        <div style={{
+          flex: "0 0 50%",
+          minWidth: 0
+        }}>
+          <WingMappings />
+        </div>
       </div>
     </div>
   );
