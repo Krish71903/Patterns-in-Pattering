@@ -53,8 +53,8 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = Math.max(containerWidth - 20, 300);
-        const height = width * 0.8;
+        const width = containerWidth * 0.95; // Use 95% of container width
+        const height = width * 0.85; // Increased aspect ratio for taller plots
         setDimensions({ width, height });
       }
     };
@@ -127,9 +127,9 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     const width = dimensions.width;
     const height = dimensions.height;
 
-    const margin = { top: 48, right: 48, bottom: 42, left: 54 };
-    const plotWidth = 360;
-    const plotHeight = 300;
+    const margin = { top: 48, right: 48, bottom: 55, left: 54 };
+    const plotWidth = Math.min(width - margin.left - margin.right, 400);
+    const plotHeight = Math.min(height - margin.top - margin.bottom, 280);
 
     const mainGroup = svg.append("g");
 
@@ -181,7 +181,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     mainGroup
       .append("text")
       .attr("x", margin.left + plotWidth / 2)
-      .attr("y", margin.top + plotHeight + 30)
+      .attr("y", margin.top + plotHeight + 35)
       .attr("text-anchor", "middle")
       .style("font-size", "12px")
       .style("font-weight", "bold")
@@ -303,7 +303,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
   }, [curves, visibleConditions, selectedDiscIDs, dimensions]);
 
   return (
-    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
+    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg
         ref={svgRef}
         width={dimensions.width}

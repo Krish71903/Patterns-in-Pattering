@@ -36,7 +36,7 @@ function App() {
       {/* Main Layout: Left Half and Right Half */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "1.2fr 0.8fr",
+        gridTemplateColumns: "1fr 1fr",
         gap: "12px",
         width: "100%",
         maxWidth: "100%",
@@ -46,7 +46,8 @@ function App() {
         <div style={{
           display: "flex",
           flexDirection: "column",
-          gap: "10px"
+          gap: "10px",
+          alignItems: "center"
         }}>
           {/* Top: Main scatter plot */}
           <div style={{ 
@@ -54,7 +55,11 @@ function App() {
             backgroundColor: "#fff",
             borderRadius: "8px",
             padding: "8px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%"
           }}>
             <WingDiscVsD onSelectionChange={setSelectedDiscs} />
           </div>

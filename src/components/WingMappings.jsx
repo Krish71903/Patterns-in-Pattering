@@ -91,7 +91,7 @@ export default function WingCoordinates() {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = Math.max(containerWidth - 20, 500);
+        const width = containerWidth;
         const height = width * 0.8; // Maintain aspect ratio
         setDimensions({ width, height });
       }

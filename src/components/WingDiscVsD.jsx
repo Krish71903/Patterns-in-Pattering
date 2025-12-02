@@ -34,7 +34,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = Math.max(containerWidth - 20, 400); // Subtract padding, min 400px
+        const width = containerWidth * .7; // Subtract padding, min 400px
         const height = width * 0.9; // Maintain aspect ratio
         setDimensions({ width, height });
       }
@@ -631,7 +631,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   // Render
   // ------------------------------------------------------------
   return (
-    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%" }}>
+    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <h2>Wing Disc Area vs Lambda</h2>
       {brushSelection && (
         <div style={{ 
