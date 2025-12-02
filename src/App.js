@@ -19,20 +19,17 @@ function App() {
         background: "#fafafa"
       }}
     >
-     <div style={{
+      <h1 style={{
         width: "100%",
-        padding: "15px",
-        background: "#f8f9fa",
-        border: "1px solid #dee2e6",
-        borderRadius: "5px"
+        textAlign: "center",
+        margin: "0 0 20px 0",
+        fontSize: "32px",
+        fontWeight: "bold",
+        color: "#333"
       }}>
-        <p style={{ margin: 0, fontSize: "16px", lineHeight: "1.4" }}>
-          Thank you for testing our interface! Please:<br />
-          Find the profiles of wing discs with area between <strong>100,000-150,000 µm²</strong>.<br />
-          Map the wing morphology of a wing from a fly raised under <strong>cold</strong> conditions.
-        </p>
-      </div>
-
+        Patterns in Pattering
+      </h1>
+      
       {/* Main Layout: Left Half and Right Half */}
       <div style={{
         display: "grid",
@@ -40,7 +37,7 @@ function App() {
         gap: "12px",
         width: "100%",
         maxWidth: "100%",
-        minHeight: "calc(100vh - 180px)"
+        minHeight: "calc(100vh - 100px)"
       }}>
         {/* Left Panel */}
         <div style={{

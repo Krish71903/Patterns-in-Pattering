@@ -127,9 +127,9 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     const width = dimensions.width;
     const height = dimensions.height;
 
-    const margin = { top: 48, right: 48, bottom: 55, left: 54 };
+    const margin = { top: 48, right: 48, bottom: 60, left: 54 };
     const plotWidth = Math.min(width - margin.left - margin.right, 400);
-    const plotHeight = Math.min(height - margin.top - margin.bottom, 280);
+    const plotHeight = Math.min(height - margin.top - margin.bottom, 320);
 
     const mainGroup = svg.append("g");
 
