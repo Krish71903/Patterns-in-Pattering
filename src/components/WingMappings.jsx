@@ -9,11 +9,21 @@ const colors = {
   cold: "#1b9e77"
 };
 
-// Color scales for gradients (darker half of each palette: 0.5 to 1.0)
+// Function to get gradient color for a condition and position (0-1)
+const getGradientColor = (condition, position) => {
+  switch (condition) {
+    case "standard": return d3.interpolateRgbBasis(["#ffa54f", "#d95f02", "#8b0000"])(position);
+    case "hypoxia": return d3.interpolateRgbBasis(["#B5A9E5", "#4B0082", "#614051"])(position);
+    case "cold": return d3.interpolateRgbBasis(["#9ACD32", "#228B22", "#014421"])(position);
+    default: return "#ccc";
+  }
+};
+
+// For backward compatibility, create an object with functions
 const gradientScales = {
-  standard: d3.scaleSequential(d3.interpolateOrRd).domain([0.5, 1.0]),
-  hypoxia: d3.scaleSequential(d3.interpolateBuPu).domain([0.5, 1.0]),
-  cold: d3.scaleSequential(d3.interpolateBuGn).domain([0.5, 1.0])
+  standard: (position) => getGradientColor("standard", position),
+  hypoxia: (position) => getGradientColor("hypoxia", position),
+  cold: (position) => getGradientColor("cold", position)
 };
 
 // Define connections between points
@@ -24,7 +34,7 @@ const connections = [
   [10, 14], [11, 15], [12, 13], [13, 14], [14, 15]
 ];
 
-// Helper function to calculate point color (fixed to use only darker half)
+// Helper function to calculate point color (using only darker half)
 const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange) => {
   let normalizedSize;
   if (filterMode === "percentile") {
@@ -46,6 +56,19 @@ const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange)
   // Map to darker half (0.5 to 1.0) - FIXED: Clamp and map properly
   const gradientPosition = Math.max(0.5, Math.min(1.0, 0.5 + (normalizedSize * 0.5)));
   return gradientScales[d.condition](gradientPosition);
+};
+
+// Helper to create gradient stops for legend (darker half: 0.5 to 1.0)
+const createGradientStops = (condition) => {
+  // Create 5 stops from 0.5 to 1.0
+  const stops = d3.range(0, 1.01, 0.25); // 0, 0.25, 0.5, 0.75, 1.0
+  return stops.map(stop => {
+    const gradientPosition = 0.5 + (stop * 0.5);
+    return {
+      offset: stop * 100,
+      color: getGradientColor(condition, gradientPosition)
+    };
+  });
 };
 
 export default function WingCoordinates() {
@@ -262,20 +285,6 @@ export default function WingCoordinates() {
     }
   };
 
-  // Helper function to get gradient stops for darker half only
-  const getDarkerHalfGradientStops = (condition) => {
-    // Create 10 stops from 0.5 to 1.0
-    const stops = d3.range(0, 1.01, 0.1); // 0, 0.1, 0.2, ..., 1.0
-    return stops.map(stop => {
-      // Map 0-1 to 0.5-1.0 for the gradient position
-      const gradientPosition = 0.5 + (stop * 0.5);
-      return {
-        offset: stop * 100,
-        color: gradientScales[condition](gradientPosition)
-      };
-    });
-  };
-
   useEffect(() => {
     const filteredData = getFilteredData();
     if (filteredData.length === 0) return;
@@ -362,7 +371,7 @@ export default function WingCoordinates() {
         .attr("y2", "0%");
 
       // Create gradient stops for darker half (0.5 to 1.0)
-      const stops = getDarkerHalfGradientStops(condition);
+      const stops = createGradientStops(condition);
       gradient.selectAll("stop")
         .data(stops)
         .enter().append("stop")
@@ -885,7 +894,7 @@ export default function WingCoordinates() {
           borderRadius: "5px",
           border: "1px solid #c8e6c9"
         }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: "12px" }}>
               <strong>Selected Wings ({selectedIds.size}):</strong> {Array.from(selectedIds).join(", ")}
             </div>
@@ -915,4 +924,3 @@ export default function WingCoordinates() {
     </div>
   );
 }
-        
