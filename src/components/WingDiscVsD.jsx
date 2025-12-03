@@ -28,7 +28,10 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = containerWidth * .7; // Subtract padding, min 400px
+        // Account for side panel (150px) + gap (15px) + padding
+        const sidePanelWidth = 165;
+        const availableWidth = containerWidth - sidePanelWidth - 20; // 20px for container padding
+        const width = Math.max(availableWidth * 0.9, 400); // Use 90% of available, min 400px
         const height = width * 0.9; // Maintain aspect ratio
         setDimensions({ width, height });
       }
@@ -527,7 +530,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   return (
     <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <h2 style={{ marginBottom: "10px", marginTop: "0" }}>Wing Disc Area vs Lambda</h2>
-      <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "15px", width: "100%", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "15px", width: "100%", justifyContent: "center", flexWrap: "nowrap" }}>
         <svg
           ref={svgRef}
           width={dimensions.width}
@@ -538,51 +541,50 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
             border: "1px solid #ddd",
             maxWidth: "100%",
             height: "auto",
-            flexShrink: 0
+            flexShrink: 1,
+            minWidth: 0
           }}
         />
-        {brushSelection && (
+        <div style={{ 
+          marginTop: "72px",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          width: "150px"
+        }}>
           <div style={{ 
-            marginTop: "72px",
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            width: "150px"
+            padding: "8px 12px", 
+            backgroundColor: "#f8f9fa", 
+            borderRadius: "5px",
+            fontSize: "13px",
+            width: "100%",
+            boxSizing: "border-box"
           }}>
-            <div style={{ 
-              padding: "8px 12px", 
-              backgroundColor: "#f8f9fa", 
-              borderRadius: "5px",
-              fontSize: "13px",
-              width: "100%",
-              boxSizing: "border-box"
-            }}>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>Area range:</strong><br />
-                {formatRange(brushSelection.area)}
-              </div>
-              <div>
-                <strong>D range:</strong><br />
-                {formatRange(brushSelection.d)}
-              </div>
+            <div style={{ marginBottom: "8px" }}>
+              <strong>Area range:</strong><br />
+              {brushSelection ? formatRange(brushSelection.area) : "—"}
             </div>
-            <div style={{ 
-              padding: "8px 12px", 
-              backgroundColor: "#f8f9fa", 
-              borderRadius: "5px",
-              fontSize: "12px",
-              color: "#555",
-              width: "100%",
-              boxSizing: "border-box",
-              wordWrap: "break-word",
-              overflowWrap: "break-word"
-            }}>
-              <strong>Instructions:</strong><br />
-              Brush slowly over the points in X or Y direction to select discs.
+            <div>
+              <strong>D range:</strong><br />
+              {brushSelection ? formatRange(brushSelection.d) : "—"}
             </div>
           </div>
-        )}
+          <div style={{ 
+            padding: "8px 12px", 
+            backgroundColor: "#f8f9fa", 
+            borderRadius: "5px",
+            fontSize: "12px",
+            color: "#555",
+            width: "100%",
+            boxSizing: "border-box",
+            wordWrap: "break-word",
+            overflowWrap: "break-word"
+          }}>
+            <strong>Instructions:</strong><br />
+            Brush slowly over the points in X or Y direction to select discs.
+          </div>
+        </div>
       </div>
       {scatterData.length === 0 && (
         <div

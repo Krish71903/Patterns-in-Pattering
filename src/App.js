@@ -19,17 +19,6 @@ function App() {
         background: "#fafafa"
       }}
     >
-      <h1 style={{
-        width: "100%",
-        textAlign: "center",
-        margin: "0 0 20px 0",
-        fontSize: "32px",
-        fontWeight: "bold",
-        color: "#333"
-      }}>
-        Patterns in Pattering
-      </h1>
-      
       {/* Main Layout: Left Half and Right Half */}
       <div style={{
         display: "grid",
@@ -37,7 +26,7 @@ function App() {
         gap: "12px",
         width: "100%",
         maxWidth: "100%",
-        minHeight: "calc(100vh - 100px)"
+        minHeight: "calc(100vh - 40px)"
       }}>
         {/* Left Panel */}
         <div style={{
