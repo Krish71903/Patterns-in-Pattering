@@ -73,6 +73,7 @@ const createGradientStops = (condition) => {
 
 export default function WingCoordinates() {
   const svgRef = useRef();
+  const prevFocusLetterRef = useRef("");
   const [data, setData] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [focusLetter, setFocusLetter] = useState("");
@@ -256,6 +257,49 @@ export default function WingCoordinates() {
     setSelectedIds(new Set());
   };
 
+  // Zoom in/out handlers - zoom around the center of the current view
+  const handleZoomIn = () => {
+    setAutoZoomEnabled(false);
+    const svg = d3.select(svgRef.current);
+    if (svg.empty()) return;
+    
+    const width = 875;
+    const height = 625;
+    const margin = { top: 36, right: 12, bottom: 24, left: 36 };
+    const centerX = (margin.left + width - margin.right) / 2;
+    const centerY = (margin.top + height - margin.bottom) / 2;
+    
+    setTransform(prev => {
+      const newScale = Math.min(20, prev.k * 1.5);
+      // Zoom around the center of the current view
+      const k = newScale / prev.k;
+      const newX = centerX - (centerX - prev.x) * k;
+      const newY = centerY - (centerY - prev.y) * k;
+      return d3.zoomIdentity.translate(newX, newY).scale(newScale);
+    });
+  };
+
+  const handleZoomOut = () => {
+    setAutoZoomEnabled(false);
+    const svg = d3.select(svgRef.current);
+    if (svg.empty()) return;
+    
+    const width = 875;
+    const height = 625;
+    const margin = { top: 36, right: 12, bottom: 24, left: 36 };
+    const centerX = (margin.left + width - margin.right) / 2;
+    const centerY = (margin.top + height - margin.bottom) / 2;
+    
+    setTransform(prev => {
+      const newScale = Math.max(0.5, prev.k / 1.5);
+      // Zoom around the center of the current view
+      const k = newScale / prev.k;
+      const newX = centerX - (centerX - prev.x) * k;
+      const newY = centerY - (centerY - prev.y) * k;
+      return d3.zoomIdentity.translate(newX, newY).scale(newScale);
+    });
+  };
+
   // Handle dual range slider
   const handleWithinChange = (index, value) => {
     setCentroidFilters(prev => {
@@ -333,19 +377,22 @@ export default function WingCoordinates() {
     const zoomedXScale = transform.rescaleX(xScale);
     const zoomedYScale = transform.rescaleY(yScale);
 
-    // Setup zoom behavior
+    // Setup zoom behavior (disable wheel zoom, only allow drag to pan)
     const zoom = d3.zoom()
       .scaleExtent([0.5, 20])
       .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+      .filter((event) => {
+        // Disable wheel zoom, only allow drag to pan
+        return event.type === "mousedown" || event.type === "mousemove" || event.type === "touchstart" || event.type === "touchmove";
+      })
       .on("zoom", (event) => {
-        // If user is manually zooming with the mouse wheel, disable auto-zoom until a new letter is chosen
-        if (event.sourceEvent && event.sourceEvent.type === "wheel") {
-          setAutoZoomEnabled(false);
-        }
         setTransform(event.transform);
       });
 
     svg.call(zoom);
+    
+    // Sync zoom behavior with transform state (for button-based zooming)
+    svg.call(zoom.transform, transform);
 
     // Auto-zoom to selected letter cluster (only once per selection, and only while enabled)
     if (focusLetter && autoZoomEnabled && focusLetter !== autoZoomedLetter) {
@@ -388,9 +435,9 @@ export default function WingCoordinates() {
           setAutoZoomedLetter(focusLetter);
         });
       }
-    } else if (!focusLetter) {
-      // Reset zoom to default view when "All letters" is selected
-      if (autoZoomedLetter || transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    } else if (!focusLetter && prevFocusLetterRef.current !== "") {
+      // Reset zoom to default view when "All letters" is selected (only when changing from a letter to empty)
+      if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
         svg
           .transition()
           .duration(200)
@@ -399,6 +446,9 @@ export default function WingCoordinates() {
       // Clear auto-zoom state when reset to all letters
       setAutoZoomedLetter("");
     }
+    
+    // Update the ref to track the previous focusLetter value
+    prevFocusLetterRef.current = focusLetter;
 
     // Axes with zoom (equal ticks for both axes)
     mainGroup.append("g")
@@ -721,6 +771,39 @@ export default function WingCoordinates() {
           <span style={{ fontSize: "12px", color: "#666" }}>
             Choose a landmark letter to zoom in on all points of that tag.
           </span>
+          {/* Zoom buttons */}
+          <div style={{ display: "flex", gap: "4px", marginLeft: "auto" }}>
+            <button
+              onClick={handleZoomOut}
+              style={{
+                fontSize: "16px",
+                padding: "4px 10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                backgroundColor: "#fff",
+                cursor: "pointer",
+                fontWeight: "bold"
+              }}
+              title="Zoom out"
+            >
+              −
+            </button>
+            <button
+              onClick={handleZoomIn}
+              style={{
+                fontSize: "16px",
+                padding: "4px 10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                backgroundColor: "#fff",
+                cursor: "pointer",
+                fontWeight: "bold"
+              }}
+              title="Zoom in"
+            >
+              +
+            </button>
+          </div>
         </div>
         
         {/* Filter Mode Toggle */}
