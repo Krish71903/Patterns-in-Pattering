@@ -400,7 +400,7 @@ export default function WingCoordinates() {
     svg.selectAll("*").remove();
 
     const width = 875;
-    const height = 645;
+    const height = 640;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
@@ -788,7 +788,7 @@ export default function WingCoordinates() {
           </div>
           <div style={{marginTop: "4px", fontSize: "12px", color: "#666"}}>
             {filterMode === "percentile" ? 
-              "Values relative to each condition's distribution (0% = smallest, 100% = largest). Whole numbers only." :
+              "Values relative to each condition's distribution (0% = smallest, 100% = largest)." :
               "Values are actual centroid size measurements."
             }
           </div>
@@ -796,85 +796,151 @@ export default function WingCoordinates() {
 
         {/* Centroid Size Filters */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
-          {/* Below Filter */}
-          <div>
-            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
-              Show below: 
-            </label>
-            <input
-              type="text"
-              value={manualInputs.below}
-              onChange={(e) => setManualInputs(prev => ({ ...prev, below: e.target.value }))}
-              onFocus={() => handleInputFocus('below')}
-              onBlur={() => handleInputBlur('below')}
-              onKeyPress={(e) => handleInputKeyPress('below', e)}
-              style={{ 
-                width: "60px", 
-                padding: "2px 4px", 
-                fontSize: "12px",
-                border: "1px solid #ccc",
-                borderRadius: "3px",
-                backgroundColor: pendingChanges.below ? "#ffffe0" : "white"
-              }}
-              placeholder={filterMode === "percentile" ? "0-100%" : "value"}
-            />
-            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={centroidFilters.below}
-                onChange={(e) => {
-                  setCentroidFilters(prev => ({ ...prev, below: +e.target.value }));
-                  setPendingChanges(prev => ({ ...prev, below: false }));
-                }}
-                style={{ flex: 1, height: "6px" }}
-              />
-            </div>
-          </div>
+{/* Below Filter */}
+<div>
+  <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
+    Show below: 
+  </label>
+  <input
+    type="text"
+    value={manualInputs.below}
+    onChange={(e) => setManualInputs(prev => ({ ...prev, below: e.target.value }))}
+    onFocus={() => handleInputFocus('below')}
+    onBlur={() => handleInputBlur('below')}
+    onKeyPress={(e) => handleInputKeyPress('below', e)}
+    style={{ 
+      width: "60px", 
+      padding: "2px 4px", 
+      fontSize: "12px",
+      border: "1px solid #ccc",
+      borderRadius: "3px",
+      backgroundColor: pendingChanges.below ? "#ffffe0" : "white"
+    }}
+    placeholder={filterMode === "percentile" ? "0-100%" : "value"}
+  />
+  <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
+    <div style={{ position: "relative", flex: 1, height: "20px" }}>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={centroidFilters.below}
+        onChange={(e) => {
+          setCentroidFilters(prev => ({ ...prev, below: +e.target.value }));
+          setPendingChanges(prev => ({ ...prev, below: false }));
+        }}
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          margin: 0,
+          opacity: 1,
+          cursor: "pointer",
+          WebkitAppearance: "none",
+          appearance: "none",
+          background: "transparent",
+          zIndex: 2
+        }}
+      />
+      {/* Custom track */}
+      <div style={{
+        position: "absolute",
+        top: "50%",
+        left: "0",
+        right: "0",
+        height: "4px",
+        background: "#ddd",
+        transform: "translateY(-50%)",
+        borderRadius: "2px"
+      }}></div>
+      {/* Filled portion */}
+      <div style={{
+        position: "absolute",
+        top: "50%",
+        left: "0",
+        width: `${centroidFilters.below * 100}%`,
+        height: "4px",
+        background: "#63d0df",
+        transform: "translateY(-50%)",
+        borderRadius: "2px"
+      }}></div>
+    </div>
+  </div>
+</div>
 
-          {/* Above Filter */}
-          <div>
-            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
-              And above: 
-            </label>
-            <input
-              type="text"
-              value={manualInputs.above}
-              onChange={(e) => setManualInputs(prev => ({ ...prev, above: e.target.value }))}
-              onFocus={() => handleInputFocus('above')}
-              onBlur={() => handleInputBlur('above')}
-              onKeyPress={(e) => handleInputKeyPress('above', e)}
-              style={{ 
-                width: "60px", 
-                padding: "2px 4px", 
-                fontSize: "12px",
-                border: "1px solid #ccc",
-                borderRadius: "3px",
-                backgroundColor: pendingChanges.above ? "#ffffe0" : "white"
-              }}
-              placeholder={filterMode === "percentile" ? "0-100%" : "value"}
-            />
-            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={centroidFilters.above}
-                onChange={(e) => {
-                  setCentroidFilters(prev => ({ ...prev, above: +e.target.value }));
-                  setPendingChanges(prev => ({ ...prev, above: false }));
-                }}
-                style={{ 
-                  flex: 1,
-                  height: "8px",
-                  background: `linear-gradient(to right, #4CAF50 ${centroidFilters.above * 100}%, #ddd ${centroidFilters.above * 100}%)`
-                }}
-              />
-            </div>
-          </div>
+{/* Above Filter */}
+<div>
+  <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
+    And above: 
+  </label>
+  <input
+    type="text"
+    value={manualInputs.above}
+    onChange={(e) => setManualInputs(prev => ({ ...prev, above: e.target.value }))}
+    onFocus={() => handleInputFocus('above')}
+    onBlur={() => handleInputBlur('above')}
+    onKeyPress={(e) => handleInputKeyPress('above', e)}
+    style={{ 
+      width: "60px", 
+      padding: "2px 4px", 
+      fontSize: "12px",
+      border: "1px solid #ccc",
+      borderRadius: "3px",
+      backgroundColor: pendingChanges.above ? "#ffffe0" : "white"
+    }}
+    placeholder={filterMode === "percentile" ? "0-100%" : "value"}
+  />
+  <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
+    <div style={{ position: "relative", flex: 1, height: "20px" }}>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={centroidFilters.above}
+        onChange={(e) => {
+          setCentroidFilters(prev => ({ ...prev, above: +e.target.value }));
+          setPendingChanges(prev => ({ ...prev, above: false }));
+        }}
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          margin: 0,
+          opacity: 1,
+          cursor: "pointer",
+          WebkitAppearance: "none",
+          appearance: "none",
+          background: "transparent",
+          zIndex: 2
+        }}
+      />
+      {/* Custom track */}
+      <div style={{
+        position: "absolute",
+        top: "50%",
+        left: "0",
+        right: "0",
+        height: "4px",
+        background: "#ddd",
+        transform: "translateY(-50%)",
+        borderRadius: "2px"
+      }}></div>
+      {/* Filled portion - to the RIGHT of the slider button */}
+      <div style={{
+        position: "absolute",
+        top: "50%",
+        left: `${centroidFilters.above * 100}%`,
+        right: "0",
+        height: "4px",
+        background: "#63d0df",
+        transform: "translateY(-50%)",
+        borderRadius: "2px"
+      }}></div>
+    </div>
+  </div>
+</div>
 
           {/* Within Filter */}
           <div>
