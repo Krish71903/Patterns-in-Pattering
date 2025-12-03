@@ -292,8 +292,8 @@ export default function WingCoordinates() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 600;
-    const height = 500;
+    const width = 875;
+    const height = 625;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
@@ -880,8 +880,8 @@ export default function WingCoordinates() {
       
       <svg
         ref={svgRef}
-        width={600}
-        height={500}
+        width={875}
+        height={625}
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 
