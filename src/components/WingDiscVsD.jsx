@@ -1,9 +1,7 @@
 import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
-import ProfileLinePlot from "./ProfileLinePlot";
 
 import mergedNormalizedGradCSV from "../data/mergedNormalizedGrad.csv";
-import mergedRawGradCSV from "../data/mergedRawGrad.csv";
 
 const colors = {
   standard: "#d95f02",
@@ -16,10 +14,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   const containerRef = useRef(null);
 
   const [scatterData, setScatterData] = useState([]);
-  const [profileData, setProfileData] = useState([]);
-  const [selectedDisc, setSelectedDisc] = useState(null);
-  const [selectedDiscInfo, setSelectedDiscInfo] = useState(null);
-  const [selectedDiscProfile, setSelectedDiscProfile] = useState([]);
   const [visibleConditions, setVisibleConditions] = useState({
     standard: true,
     hypoxia: true,
@@ -52,21 +46,18 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     };
   }, []);
 
-  // Add CSS for brush styling
+  // Add CSS for brush styling - hide selection rectangle
   useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
       .brush .selection {
-        fill: #4A90E2 !important;
-        fill-opacity: 0.2 !important;
-        stroke: #4A90E2 !important;
-        stroke-width: 2px !important;
-        stroke-dasharray: 5,5 !important;
+        fill: transparent !important;
+        fill-opacity: 0 !important;
+        stroke: none !important;
         pointer-events: none !important;
       }
       .brush .handle {
-        fill: #4A90E2 !important;
-        stroke: #4A90E2 !important;
+        display: none !important;
       }
       .brush .overlay {
         fill: none !important;
@@ -86,11 +77,8 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   // Load CSV data
   // ------------------------------------------------------------
   useEffect(() => {
-    Promise.all([
-      d3.csv(mergedNormalizedGradCSV),
-      d3.csv(mergedRawGradCSV)
-    ])
-      .then(([csvData, rawData]) => {
+    d3.csv(mergedNormalizedGradCSV)
+      .then((csvData) => {
         console.log("CSV loaded successfully!", csvData);
 
         // Scatter data
@@ -118,17 +106,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           [...new Set(processed.map((d) => d.condition))]
         );
         setScatterData(processed);
-
-        // Profile data (raw gradients)
-        const profiles = rawData.map((d) => ({
-          disc: d.disc, 
-          distance: +d.distance,
-          value: +d.value,
-          condition: d.condition
-        }));
-
-        console.log("Profile data loaded:", profiles.length, "points");
-        setProfileData(profiles);
       })
       .catch((err) => {
         console.error("Error loading data:", err);
@@ -265,29 +242,9 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         hitAreaGroup.style("pointer-events", "none");
       })
       .on("brush", (event) => {
-        // Only update visual styling during brush - D3 handles rectangle movement
-        // Don't update state here to avoid re-renders that cause lag
+        // Update selection in real-time for smooth brushing
         const sel = event.selection;
         if (sel) {
-          // Apply styling during brushing to ensure rectangle is visible
-          brushGroup.selectAll(".selection")
-            .attr("fill", "#4A90E2")
-            .attr("fill-opacity", 0.2)
-            .attr("stroke", "#4A90E2")
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "5,5");
-        }
-      })
-      .on("end", (event) => {
-        const sel = event.selection;
-        
-        if (!sel) {
-          // Clear selection
-          setSelectedDiscIDs([]);
-          setBrushSelection(null);
-          onSelectionChange([]);
-        } else {
-          // Calculate selection only when brush ends
           const [[x0, y0], [x1, y1]] = sel;
           // Ensure we get min/max correctly regardless of drag direction
           const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
@@ -311,16 +268,16 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
             d: [dMin, dMax]
           });
           onSelectionChange(selected);
-
-          // Ensure styling persists after brush ends
-          brushGroup.selectAll(".selection")
-            .attr("fill", "#4A90E2")
-            .attr("fill-opacity", 0.2)
-            .attr("stroke", "#4A90E2")
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "5,5");
+        } else {
+          // Clear selection if no selection
+          setSelectedDiscIDs([]);
+          setBrushSelection(null);
+          onSelectionChange([]);
         }
-        // Re-enable hit area interactions after brush ends
+      })
+      .on("end", (event) => {
+        // Selection is already updated in real-time during brush event
+        // Just re-enable hit area interactions after brush ends
         hitAreaGroup.style("pointer-events", "all");
       });
 
@@ -341,21 +298,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .attr("fill", "transparent")
       .attr("stroke", "none")
       .style("pointer-events", "all")
-      .style("cursor", "pointer")
-      // click: select disc and show profile
-      .on("click", function (event, d) {
-        event.stopPropagation();
-        
-        if (d.disc === selectedDisc) {
-          // deselect
-          setSelectedDisc(null);
-          setSelectedDiscInfo(null);
-          setSelectedDiscProfile([]);
-        } else {
-          // select
-          setSelectedDisc(d.disc);
-        }
-      })
       // hover: show tooltip on hit area
       .on("mouseover", function (event, d) {
         // Only regenerate HTML if disc changed
@@ -399,16 +341,13 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       )
       .attr("transform", (d) => `translate(${xScale(d.area)}, ${yScale(d.D)})`)
       .attr("fill", (d) => colors[d.condition] || "#999")
-      .attr("stroke", (d) =>
-        d.disc === selectedDisc ? "#000" : "#fff"
-      )
-      .attr("stroke-width", (d) => (d.disc === selectedDisc ? 3 : 1))
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1)
       .attr("opacity", (d) => {
         if (!hasSelection) return 0.7;
         return selectedSet.has(d.disc) ? 0.9 : 0.15;
       })
-      .style("pointer-events", "none") // Let hit area handle events
-      .style("cursor", "pointer");
+      .style("pointer-events", "none"); // Let hit area handle events
 
     // Restore brush selection if it exists
     if (brushSelection && brushSelection.area && brushSelection.d) {
@@ -425,28 +364,14 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       }
     }
 
-    // Style the brush handles and selection rectangle immediately
+    // Hide brush handles and selection rectangle
     brushGroup.selectAll(".handle")
-      .attr("fill", "#4A90E2")
-      .attr("stroke", "#4A90E2");
+      .style("display", "none");
     
-    // Apply styling to selection rectangle - do it synchronously and also after a brief delay
     brushGroup.selectAll(".selection")
-      .attr("fill", "#4A90E2")
-      .attr("fill-opacity", 0.2)
-      .attr("stroke", "#4A90E2")
-      .attr("stroke-width", 2)
-      .attr("stroke-dasharray", "5,5");
-    
-    // Also apply after a brief delay to catch any async updates
-    setTimeout(() => {
-      brushGroup.selectAll(".selection")
-        .attr("fill", "#4A90E2")
-        .attr("fill-opacity", 0.2)
-        .attr("stroke", "#4A90E2")
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "5,5");
-    }, 10);
+      .attr("fill", "transparent")
+      .attr("fill-opacity", 0)
+      .attr("stroke", "none");
 
     // Top histogram (by condition)
     Object.entries(colors).forEach(([condition, color]) => {
@@ -584,42 +509,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   }, [
     scatterData,
     visibleConditions,
-    selectedDisc,
     selectedDiscIDs,
     brushSelection,
     onSelectionChange,
     dimensions
   ]);
-
-  // ------------------------------------------------------------
-  // When a disc is selected, filter profile data for that disc
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (!selectedDisc || profileData.length === 0) {
-      setSelectedDiscInfo(null);
-      setSelectedDiscProfile([]);
-      return;
-    }
-
-    const discInfo = scatterData.find((d) => d.disc === selectedDisc);
-    if (!discInfo) {
-      console.warn("Could not find disc info for:", selectedDisc);
-      return;
-    }
-
-    const discProfile = profileData.filter((d) => d.disc === selectedDisc);
-
-    console.log(
-      `Found ${discProfile.length} profile points for disc: ${selectedDisc}`
-    );
-
-    if (discProfile.length === 0) {
-      console.warn("No profile data found for disc:", selectedDisc);
-    }
-
-    setSelectedDiscInfo(discInfo);
-    setSelectedDiscProfile(discProfile);
-  }, [selectedDisc, profileData, scatterData]);
 
   // Format range display
   const formatRange = (range) => {
@@ -664,17 +558,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           Loading data...
         </div>
       )}
-
-      {selectedDisc &&
-        selectedDiscInfo &&
-        selectedDiscProfile.length > 0 && (
-          <ProfileLinePlot
-            selectedDisc={selectedDisc}
-            discInfo={selectedDiscInfo}
-            discProfile={selectedDiscProfile}
-            colors={colors}
-          />
-        )}
     </div>
   );
 }
