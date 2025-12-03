@@ -335,7 +335,7 @@ export default function WingCoordinates() {
 
     // Setup zoom behavior
     const zoom = d3.zoom()
-      .scaleExtent([0.5, 8])
+      .scaleExtent([0.5, 20])
       .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
       .on("zoom", (event) => {
         // If user is manually zooming with the mouse wheel, disable auto-zoom until a new letter is chosen
@@ -364,8 +364,8 @@ export default function WingCoordinates() {
         const fullXSpan = xDomain[1] - xDomain[0] || 1;
         const fullYSpan = yDomain[1] - yDomain[0] || 1;
 
-        const scaleFactor = 0.8 / Math.max(focusXSpan / fullXSpan, focusYSpan / fullYSpan);
-        const clampedScale = Math.max(1, Math.min(8, scaleFactor));
+        const scaleFactor = 1 / Math.max(focusXSpan / fullXSpan, focusYSpan / fullYSpan);
+        const clampedScale = Math.max(1, Math.min(20, scaleFactor));
 
         const cx = (xMin + xMax) / 2;
         const cy = (yMin + yMax) / 2;
