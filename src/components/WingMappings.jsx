@@ -13,31 +13,29 @@ const getGradientColor = (condition, position) => {
   switch (condition) {
     case "standard": 
       return d3.interpolateRgbBasis([
-        "#ffa54f",  // Light orange
-        "#ff8c00",  // Dark orange
-        "#d95f02",  // True red-orange
-        "#b34700",  // Dark red
-        "#8b0000",  // Burgundy
-        "#660000"   // Very dark burgundy
+        "#ffa54f",  
+        "#ff8c00",  
+        "#d95f02",  
+        "#b34700",  
+        "#8b0000",  
+        "#660000"   
       ])(position);
       
-    case "hypoxia": 
-      return d3.interpolateRgbBasis([
-        "#87CEEB",  // Sky blue
-        "#5d8aa8",  // Medium blue
-        "#4B0082",  // Indigo
-        "#3a0066",  // Dark indigo
-        "#614051",  // Eggplant purple
-        "#2d1b33"   // Very dark purple
-      ])(position);
+  case "hypoxia":
+  return d3.interpolateRgbBasis([
+    "#b4a7d6",  
+    "#8e7cc3",  
+    "#6a5acd",  
+    "#4b0082",  
+    "#2d004d",  
+    "#1c0333"   
+  ])(position);
 
     case "cold": 
       return d3.interpolateRgbBasis([
-        "#9ACD32",  // Yellow green
-        "#6b8e23",  // Olive green
-        "#228B22",  // True green
-        "#006400",  // Dark green
-        "#014421",  // Forest green
+        "#9ACD32",  
+        "#6b8e23",  
+        "#228B22",  
         "#002d00"   // Very dark green
       ])(position);
       
