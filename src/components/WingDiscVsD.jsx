@@ -1,6 +1,5 @@
 import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
-import ProfileLinePlot from "./ProfileLinePlot";
 
 import mergedNormalizedGradCSV from "../data/mergedNormalizedGrad.csv";
 import mergedRawGradCSV from "../data/mergedRawGrad.csv";
@@ -664,17 +663,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           Loading data...
         </div>
       )}
-
-      {selectedDisc &&
-        selectedDiscInfo &&
-        selectedDiscProfile.length > 0 && (
-          <ProfileLinePlot
-            selectedDisc={selectedDisc}
-            discInfo={selectedDiscInfo}
-            discProfile={selectedDiscProfile}
-            colors={colors}
-          />
-        )}
     </div>
   );
 }
