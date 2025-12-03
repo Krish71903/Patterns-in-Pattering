@@ -75,6 +75,9 @@ export default function WingCoordinates() {
   const svgRef = useRef();
   const [data, setData] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [focusLetter, setFocusLetter] = useState("");
+  const [autoZoomedLetter, setAutoZoomedLetter] = useState("");
+  const [autoZoomEnabled, setAutoZoomEnabled] = useState(true);
   const [visibleConditions, setVisibleConditions] = useState({
     standard: true,
     hypoxia: true,
@@ -292,11 +295,13 @@ export default function WingCoordinates() {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = 600;
-    const height = 500;
+    const width = 875;
+    const height = 625;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
+    const plotCenterX = (margin.left + width - margin.right) / 2;
+    const plotCenterY = (margin.top + height - margin.bottom) / 2;
 
     // Get all coordinates for scaling - use ALL data for consistent scaling
     const allCoords = data.map(d => [d.x, d.y]);
@@ -327,6 +332,63 @@ export default function WingCoordinates() {
     // Apply zoom transform
     const zoomedXScale = transform.rescaleX(xScale);
     const zoomedYScale = transform.rescaleY(yScale);
+
+    // Setup zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 8])
+      .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+      .on("zoom", (event) => {
+        // If user is manually zooming with the mouse wheel, disable auto-zoom until a new letter is chosen
+        if (event.sourceEvent && event.sourceEvent.type === "wheel") {
+          setAutoZoomEnabled(false);
+        }
+        setTransform(event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Auto-zoom to selected letter cluster (only once per selection, and only while enabled)
+    if (focusLetter && autoZoomEnabled && focusLetter !== autoZoomedLetter) {
+      const focusPoints = filteredData.filter(d => d.letter === focusLetter);
+      if (focusPoints.length > 0) {
+        const xVals = focusPoints.map(d => d.x);
+        const yVals = focusPoints.map(d => d.y);
+
+        const xMin = d3.min(xVals);
+        const xMax = d3.max(xVals);
+        const yMin = d3.min(yVals);
+        const yMax = d3.max(yVals);
+
+        const focusXSpan = xMax - xMin || 1;
+        const focusYSpan = yMax - yMin || 1;
+        const fullXSpan = xDomain[1] - xDomain[0] || 1;
+        const fullYSpan = yDomain[1] - yDomain[0] || 1;
+
+        const scaleFactor = 0.8 / Math.max(focusXSpan / fullXSpan, focusYSpan / fullYSpan);
+        const clampedScale = Math.max(1, Math.min(8, scaleFactor));
+
+        const cx = (xMin + xMax) / 2;
+        const cy = (yMin + yMax) / 2;
+
+        const cxScreen = xScale(cx);
+        const cyScreen = yScale(cy);
+
+        const t = svg
+          .transition()
+          .duration(200)
+          .call(
+            zoom.transform,
+            d3.zoomIdentity
+              .translate(plotCenterX, plotCenterY)
+              .scale(clampedScale)
+              .translate(-cxScreen, -cyScreen)
+          );
+
+        t.on("end", () => {
+          setAutoZoomedLetter(focusLetter);
+        });
+      }
+    }
 
     // Axes with zoom (equal ticks for both axes)
     mainGroup.append("g")
@@ -500,16 +562,6 @@ export default function WingCoordinates() {
       .style("pointer-events", "none")
       .text(d => d.letter);
 
-    // Setup zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.5, 8])
-      .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
-      .on("zoom", (event) => {
-        setTransform(event.transform);
-      });
-
-    svg.call(zoom);
-
     // Condition Filter Legend with Gradient Bars (darker half only: 0.5 to 1.0)
     const legendX = 60;
     const legendY = margin.top + 25;
@@ -574,7 +626,7 @@ export default function WingCoordinates() {
     return () => {
       tooltip.remove();
     };
-  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform]);
+  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform, focusLetter, autoZoomedLetter, autoZoomEnabled]);
 
   // Format display value based on filter mode
   const formatDisplayValue = (value, isBelow = false) => {
@@ -629,6 +681,37 @@ export default function WingCoordinates() {
         borderRadius: "5px",
         border: "1px solid #dee2e6"
       }}>
+
+        {/* Auto-zoom to letter cluster */}
+        <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+          <label style={{ fontWeight: "bold", fontSize: "12px" }}>Auto-zoom to letter cluster:</label>
+          <select
+            value={focusLetter}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFocusLetter(value);
+              setAutoZoomedLetter("");
+              setAutoZoomEnabled(true);
+            }}
+            style={{
+              fontSize: "12px",
+              padding: "4px 6px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+              backgroundColor: "#fff"
+            }}
+          >
+            <option value="">All letters (reset zoom)</option>
+            {Array.from({ length: 15 }, (_, i) => String.fromCharCode(65 + i)).map(letter => (
+              <option key={letter} value={letter}>
+                {letter}
+              </option>
+            ))}
+          </select>
+          <span style={{ fontSize: "11px", color: "#666" }}>
+            Choose a landmark letter to zoom into all points with that tag.
+          </span>
+        </div>
         
         {/* Filter Mode Toggle */}
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "15px" }}>
@@ -880,8 +963,8 @@ export default function WingCoordinates() {
       
       <svg
         ref={svgRef}
-        width={600}
-        height={500}
+        width={875}
+        height={625}
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 
