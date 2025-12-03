@@ -9,12 +9,38 @@ const colors = {
   cold: "#1b9e77"
 };
 
-// Function to get gradient color for a condition and position (0-1)
 const getGradientColor = (condition, position) => {
   switch (condition) {
-    case "standard": return d3.interpolateRgbBasis(["#ffa54f", "#d95f02", "#8b0000"])(position);
-    case "hypoxia": return d3.interpolateRgbBasis(["#B5A9E5", "#4B0082", "#614051"])(position);
-    case "cold": return d3.interpolateRgbBasis(["#9ACD32", "#228B22", "#014421"])(position);
+    case "standard": 
+      return d3.interpolateRgbBasis([
+        "#ffa54f",  // Light orange
+        "#ff8c00",  // Dark orange
+        "#d95f02",  // True red-orange
+        "#b34700",  // Dark red
+        "#8b0000",  // Burgundy
+        "#660000"   // Very dark burgundy
+      ])(position);
+      
+    case "hypoxia": 
+      return d3.interpolateRgbBasis([
+        "#87CEEB",  // Sky blue
+        "#5d8aa8",  // Medium blue
+        "#4B0082",  // Indigo
+        "#3a0066",  // Dark indigo
+        "#614051",  // Eggplant purple
+        "#2d1b33"   // Very dark purple
+      ])(position);
+
+    case "cold": 
+      return d3.interpolateRgbBasis([
+        "#9ACD32",  // Yellow green
+        "#6b8e23",  // Olive green
+        "#228B22",  // True green
+        "#006400",  // Dark green
+        "#014421",  // Forest green
+        "#002d00"   // Very dark green
+      ])(position);
+      
     default: return "#ccc";
   }
 };
@@ -34,7 +60,7 @@ const connections = [
   [10, 14], [11, 15], [12, 13], [13, 14], [14, 15]
 ];
 
-// Helper function to calculate point color (using only darker half)
+// Helper function to calculate point color (using full range 0-1)
 const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange) => {
   let normalizedSize;
   if (filterMode === "percentile") {
@@ -50,30 +76,31 @@ const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange)
     // Use absolute value normalized to overall range
     const overallMin = overallCentroidRange[0];
     const overallMax = overallCentroidRange[1];
-    normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
+    if (overallMax === overallMin) {
+      normalizedSize = 0.5; // Avoid division by zero
+    } else {
+      normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
+    }
   }
   
-  // Map to darker half (0.5 to 1.0) - FIXED: Clamp and map properly
-  const gradientPosition = Math.max(0.5, Math.min(1.0, 0.5 + (normalizedSize * 0.5)));
+  // Use full range (0 to 1) for the new gradients
+  const gradientPosition = Math.max(0, Math.min(1, normalizedSize));
   return gradientScales[d.condition](gradientPosition);
 };
 
-// Helper to create gradient stops for legend (darker half: 0.5 to 1.0)
+// Helper to create gradient stops for legend (full range: 0 to 1)
 const createGradientStops = (condition) => {
-  // Create 5 stops from 0.5 to 1.0
+  // Create 5 stops from 0 to 1
   const stops = d3.range(0, 1.01, 0.25); // 0, 0.25, 0.5, 0.75, 1.0
   return stops.map(stop => {
-    const gradientPosition = 0.5 + (stop * 0.5);
     return {
       offset: stop * 100,
-      color: getGradientColor(condition, gradientPosition)
+      color: getGradientColor(condition, stop)
     };
   });
 };
-
 export default function WingCoordinates() {
   const svgRef = useRef();
-  const prevFocusLetterRef = useRef("");
   const [data, setData] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [focusLetter, setFocusLetter] = useState("");
@@ -257,49 +284,6 @@ export default function WingCoordinates() {
     setSelectedIds(new Set());
   };
 
-  // Zoom in/out handlers - zoom around the center of the current view
-  const handleZoomIn = () => {
-    setAutoZoomEnabled(false);
-    const svg = d3.select(svgRef.current);
-    if (svg.empty()) return;
-    
-    const width = 875;
-    const height = 625;
-    const margin = { top: 36, right: 12, bottom: 24, left: 36 };
-    const centerX = (margin.left + width - margin.right) / 2;
-    const centerY = (margin.top + height - margin.bottom) / 2;
-    
-    setTransform(prev => {
-      const newScale = Math.min(20, prev.k * 1.5);
-      // Zoom around the center of the current view
-      const k = newScale / prev.k;
-      const newX = centerX - (centerX - prev.x) * k;
-      const newY = centerY - (centerY - prev.y) * k;
-      return d3.zoomIdentity.translate(newX, newY).scale(newScale);
-    });
-  };
-
-  const handleZoomOut = () => {
-    setAutoZoomEnabled(false);
-    const svg = d3.select(svgRef.current);
-    if (svg.empty()) return;
-    
-    const width = 875;
-    const height = 625;
-    const margin = { top: 36, right: 12, bottom: 24, left: 36 };
-    const centerX = (margin.left + width - margin.right) / 2;
-    const centerY = (margin.top + height - margin.bottom) / 2;
-    
-    setTransform(prev => {
-      const newScale = Math.max(0.5, prev.k / 1.5);
-      // Zoom around the center of the current view
-      const k = newScale / prev.k;
-      const newX = centerX - (centerX - prev.x) * k;
-      const newY = centerY - (centerY - prev.y) * k;
-      return d3.zoomIdentity.translate(newX, newY).scale(newScale);
-    });
-  };
-
   // Handle dual range slider
   const handleWithinChange = (index, value) => {
     setCentroidFilters(prev => {
@@ -377,22 +361,19 @@ export default function WingCoordinates() {
     const zoomedXScale = transform.rescaleX(xScale);
     const zoomedYScale = transform.rescaleY(yScale);
 
-    // Setup zoom behavior (disable wheel zoom, only allow drag to pan)
+    // Setup zoom behavior
     const zoom = d3.zoom()
       .scaleExtent([0.5, 20])
       .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
-      .filter((event) => {
-        // Disable wheel zoom, only allow drag to pan
-        return event.type === "mousedown" || event.type === "mousemove" || event.type === "touchstart" || event.type === "touchmove";
-      })
       .on("zoom", (event) => {
+        // If user is manually zooming with the mouse wheel, disable auto-zoom until a new letter is chosen
+        if (event.sourceEvent && event.sourceEvent.type === "wheel") {
+          setAutoZoomEnabled(false);
+        }
         setTransform(event.transform);
       });
 
     svg.call(zoom);
-    
-    // Sync zoom behavior with transform state (for button-based zooming)
-    svg.call(zoom.transform, transform);
 
     // Auto-zoom to selected letter cluster (only once per selection, and only while enabled)
     if (focusLetter && autoZoomEnabled && focusLetter !== autoZoomedLetter) {
@@ -435,9 +416,9 @@ export default function WingCoordinates() {
           setAutoZoomedLetter(focusLetter);
         });
       }
-    } else if (!focusLetter && prevFocusLetterRef.current !== "") {
-      // Reset zoom to default view when "All letters" is selected (only when changing from a letter to empty)
-      if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    } else if (!focusLetter) {
+      // Reset zoom to default view when "All letters" is selected
+      if (autoZoomedLetter || transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
         svg
           .transition()
           .duration(200)
@@ -446,9 +427,6 @@ export default function WingCoordinates() {
       // Clear auto-zoom state when reset to all letters
       setAutoZoomedLetter("");
     }
-    
-    // Update the ref to track the previous focusLetter value
-    prevFocusLetterRef.current = focusLetter;
 
     // Axes with zoom (equal ticks for both axes)
     mainGroup.append("g")
@@ -607,7 +585,7 @@ export default function WingCoordinates() {
 
     // Add circles for points with gradient colors - stroke matches fill for selected
     points.append("circle")
-      .attr("r", 4)
+      .attr("r", 6)
       .attr("fill", d => calculatePointColor(d, filterMode, centroidStats, overallCentroidRange))
       .attr("stroke", d => selectedIds.has(d.id) ? calculatePointColor(d, filterMode, centroidStats, overallCentroidRange) : "#fff")
       .attr("stroke-width", d => selectedIds.has(d.id) ? 2 : 1);
@@ -771,39 +749,6 @@ export default function WingCoordinates() {
           <span style={{ fontSize: "12px", color: "#666" }}>
             Choose a landmark letter to zoom in on all points of that tag.
           </span>
-          {/* Zoom buttons */}
-          <div style={{ display: "flex", gap: "4px", marginLeft: "auto" }}>
-            <button
-              onClick={handleZoomOut}
-              style={{
-                fontSize: "16px",
-                padding: "4px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                backgroundColor: "#fff",
-                cursor: "pointer",
-                fontWeight: "bold"
-              }}
-              title="Zoom out"
-            >
-              −
-            </button>
-            <button
-              onClick={handleZoomIn}
-              style={{
-                fontSize: "16px",
-                padding: "4px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                backgroundColor: "#fff",
-                cursor: "pointer",
-                fontWeight: "bold"
-              }}
-              title="Zoom in"
-            >
-              +
-            </button>
-          </div>
         </div>
         
                 {/* Sex Filter */}
