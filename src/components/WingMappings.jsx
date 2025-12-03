@@ -388,6 +388,16 @@ export default function WingCoordinates() {
           setAutoZoomedLetter(focusLetter);
         });
       }
+    } else if (!focusLetter) {
+      // Reset zoom to default view when "All letters" is selected
+      if (autoZoomedLetter || transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+        svg
+          .transition()
+          .duration(200)
+          .call(zoom.transform, d3.zoomIdentity);
+      }
+      // Clear auto-zoom state when reset to all letters
+      setAutoZoomedLetter("");
     }
 
     // Axes with zoom (equal ticks for both axes)
