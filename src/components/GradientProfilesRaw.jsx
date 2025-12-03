@@ -97,9 +97,9 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     const width = dimensions.width;
     const height = dimensions.height;
 
-    const margin = { top: 48, right: 48, bottom: 60, left: 54 };
-    const plotWidth = Math.min(width - margin.left - margin.right, 400);
-    const plotHeight = Math.min(height - margin.top - margin.bottom, 320);
+    const margin = { top: 30, right: 48, bottom: 60, left: 54 };
+    const plotWidth = 215;
+    const plotHeight = 170;
 
     const mainGroup = svg.append("g");
 
@@ -218,8 +218,8 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     }
 
     // legend
-    const legendX = margin.left + 35;
-    const legendY = margin.top + plotHeight - 55;
+    const legendX = margin.left + 87;
+    const legendY = margin.top + plotHeight - 45;
 
     mainGroup
       .append("text")
@@ -269,7 +269,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
   }, [curves, visibleConditions, selectedDiscIDs, dimensions]);
 
   return (
-    <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div ref={containerRef} style={{ padding: "8px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg
         ref={svgRef}
         width={dimensions.width}
@@ -284,7 +284,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       />
       {!curves.length && (
         <div
-          style={{ textAlign: "center", marginTop: "20px", color: "#666" }}
+          style={{ textAlign: "center", marginTop: "10px", color: "#666" }}
         >
           Loading gradient profiles...
         </div>
