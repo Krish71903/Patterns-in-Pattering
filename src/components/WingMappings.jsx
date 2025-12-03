@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 
 import mergedWingCoordsCSV from "../data/mergedWingCoords.csv";
 
@@ -21,36 +21,34 @@ const getGradientColor = (condition, position) => {
         "#660000"   
       ])(position);
       
-  case "hypoxia":
-  return d3.interpolateRgbBasis([
-    "#b4a7d6",  
-    "#8e7cc3",  
-    "#6a5acd",  
-    "#4b0082",  
-    "#2d004d",  
-    "#1c0333"   
-  ])(position);
+    case "hypoxia":
+      return d3.interpolateRgbBasis([
+        "#b4a7d6",  
+        "#8e7cc3",  
+        "#6a5acd",  
+        "#4b0082",  
+        "#2d004d",  
+        "#1c0333"   
+      ])(position);
 
     case "cold": 
       return d3.interpolateRgbBasis([
         "#9ACD32",  
         "#6b8e23",  
         "#228B22",  
-        "#002d00"   // Very dark green
+        "#002d00"   
       ])(position);
       
     default: return "#ccc";
   }
 };
 
-// For backward compatibility, create an object with functions
 const gradientScales = {
   standard: (position) => getGradientColor("standard", position),
   hypoxia: (position) => getGradientColor("hypoxia", position),
   cold: (position) => getGradientColor("cold", position)
 };
 
-// Define connections between points
 const connections = [
   [1, 7], [2, 6], [2, 7], [3, 5], [3, 9],
   [4, 5], [4, 15], [5, 11], [6, 12], [7, 12],
@@ -58,11 +56,9 @@ const connections = [
   [10, 14], [11, 15], [12, 13], [13, 14], [14, 15]
 ];
 
-// Helper function to calculate point color (using full range 0-1)
 const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange) => {
   let normalizedSize;
   if (filterMode === "percentile") {
-    // Convert to percentile within condition
     const stats = centroidStats[d.condition];
     if (stats && stats.values.length > 0) {
       const index = stats.values.findIndex(v => v >= d.centroidSize);
@@ -71,32 +67,27 @@ const calculatePointColor = (d, filterMode, centroidStats, overallCentroidRange)
       normalizedSize = 0;
     }
   } else {
-    // Use absolute value normalized to overall range
     const overallMin = overallCentroidRange[0];
     const overallMax = overallCentroidRange[1];
     if (overallMax === overallMin) {
-      normalizedSize = 0.5; // Avoid division by zero
+      normalizedSize = 0.5;
     } else {
       normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
     }
   }
   
-  // Use full range (0 to 1) for the new gradients
   const gradientPosition = Math.max(0, Math.min(1, normalizedSize));
   return gradientScales[d.condition](gradientPosition);
 };
 
-// Helper to create gradient stops for legend (full range: 0 to 1)
 const createGradientStops = (condition) => {
-  // Create 5 stops from 0 to 1
-  const stops = d3.range(0, 1.01, 0.25); // 0, 0.25, 0.5, 0.75, 1.0
-  return stops.map(stop => {
-    return {
-      offset: stop * 100,
-      color: getGradientColor(condition, stop)
-    };
-  });
+  const stops = d3.range(0, 1.01, 0.25);
+  return stops.map(stop => ({
+    offset: stop * 100,
+    color: getGradientColor(condition, stop)
+  }));
 };
+
 export default function WingCoordinates() {
   const svgRef = useRef();
   const [data, setData] = useState([]);
@@ -110,8 +101,7 @@ export default function WingCoordinates() {
     cold: true
   });
   
-  // Filter states with percentile/absolute mode
-  const [filterMode, setFilterMode] = useState("percentile"); // "percentile" or "absolute"
+  const [filterMode, setFilterMode] = useState("percentile");
   const [centroidFilters, setCentroidFilters] = useState({
     below: 0.1,
     above: 0.9,
@@ -122,33 +112,38 @@ export default function WingCoordinates() {
     male: true
   });
   
-  // Store centroid size data per condition for percentile calculations
   const [centroidStats, setCentroidStats] = useState({
     standard: { min: 0, max: 1, values: [] },
     hypoxia: { min: 0, max: 1, values: [] },
     cold: { min: 0, max: 1, values: [] }
   });
   
-  // Store all centroid values for overall stats
   const [allCentroidValues, setAllCentroidValues] = useState([]);
   const [overallCentroidRange, setOverallCentroidRange] = useState([0, 1]);
-
-  // Zoom state
   const [transform, setTransform] = useState(d3.zoomIdentity);
 
-  // Load data and calculate statistics
+  // State for manual inputs with pending changes
+  const [manualInputs, setManualInputs] = useState({
+    below: "10%",
+    above: "90%",
+    withinMin: "0%",
+    withinMax: "100%"
+  });
+  
+  // State to track which inputs have pending changes
+  const [pendingChanges, setPendingChanges] = useState({
+    below: false,
+    above: false,
+    withinMin: false,
+    withinMax: false
+  });
+
+  // Load data
   useEffect(() => {
     d3.csv(mergedWingCoordsCSV).then(csvData => {
-      console.log("Wing coordinates loaded:", csvData.length);
-      
-      // Group data by condition for percentile calculations
-      const conditionGroups = {
-        standard: [],
-        hypoxia: [],
-        cold: []
-      };
-      
+      const conditionGroups = { standard: [], hypoxia: [], cold: [] };
       const allCentroids = [];
+      
       const processed = csvData.map(row => {
         const condition = row.Condition?.toLowerCase() || "standard";
         const normalizedCondition = condition.includes("hypo") ? "hypoxia" : 
@@ -176,7 +171,6 @@ export default function WingCoordinates() {
         return points;
       }).flat();
 
-      // Calculate statistics for each condition
       const stats = {};
       Object.keys(conditionGroups).forEach(condition => {
         const values = conditionGroups[condition];
@@ -189,55 +183,17 @@ export default function WingCoordinates() {
         }
       });
       
-      // Overall statistics
       setAllCentroidValues(allCentroids.sort((a, b) => a - b));
       const overallMin = d3.min(allCentroids);
       const overallMax = d3.max(allCentroids);
       setOverallCentroidRange([overallMin, overallMax]);
       setCentroidStats(stats);
-      
-      console.log("Processed points:", processed.length);
-      console.log("Centroid stats:", stats);
-      
       setData(processed);
     }).catch(err => console.error("Error loading wing coordinates:", err));
   }, []);
 
-  // Convert between percentile and absolute values
-  const convertToPercentile = (value, condition = "overall") => {
-    if (condition === "overall") {
-      if (allCentroidValues.length === 0) return 0;
-      const index = allCentroidValues.findIndex(v => v >= value);
-      return index === -1 ? 1 : index / allCentroidValues.length;
-    } else {
-      const stats = centroidStats[condition];
-      if (!stats || stats.values.length === 0) return 0;
-      const index = stats.values.findIndex(v => v >= value);
-      return index === -1 ? 1 : index / stats.values.length;
-    }
-  };
-
-  // Get current filter values in appropriate units
-  const getFilterValue = (value, isBelow = false) => {
-    if (filterMode === "percentile") {
-      return value;
-    } else {
-      // For absolute mode, we need to handle "below" and "above" differently
-      if (isBelow) {
-        const minValues = Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined);
-        const overallMin = minValues.length > 0 ? d3.min(minValues) : overallCentroidRange[0];
-        return overallMin + value * (overallCentroidRange[1] - overallMin);
-      } else {
-        const maxValues = Object.values(centroidStats).map(s => s.max).filter(v => v !== undefined);
-        const overallMax = maxValues.length > 0 ? d3.max(maxValues) : overallCentroidRange[1];
-        const overallMin = d3.min(Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined)) || overallCentroidRange[0];
-        return overallMin + value * (overallMax - overallMin);
-      }
-    }
-  };
-
-  // Apply filters to data
-  const getFilteredData = () => {
+  // Memoized filtered data calculation
+  const filteredData = useMemo(() => {
     if (data.length === 0) return [];
 
     return data.filter(d => {
@@ -248,25 +204,163 @@ export default function WingCoordinates() {
       
       let normalizedSize;
       if (filterMode === "percentile") {
-        // Use condition-specific percentile
-        normalizedSize = convertToPercentile(d.centroidSize, d.condition);
+        const stats = centroidStats[d.condition];
+        if (stats && stats.values.length > 0) {
+          const index = stats.values.findIndex(v => v >= d.centroidSize);
+          normalizedSize = index === -1 ? 1 : index / stats.values.length;
+        } else {
+          normalizedSize = 0;
+        }
       } else {
-        // Use absolute value normalized to overall range
         const overallMin = overallCentroidRange[0];
         const overallMax = overallCentroidRange[1];
         normalizedSize = (d.centroidSize - overallMin) / (overallMax - overallMin);
       }
       
-      // Fixed logic: ((below OR above) AND within)
       const showBelow = normalizedSize <= centroidFilters.below;
       const showAbove = normalizedSize >= centroidFilters.above;
       const showWithin = normalizedSize >= centroidFilters.within[0] && normalizedSize <= centroidFilters.within[1];
       
       return (showBelow || showAbove) && showWithin;
     });
+  }, [data, visibleConditions, sexFilters, filterMode, centroidFilters, centroidStats, overallCentroidRange]);
+
+  // Memoized convertToPercentile
+  const convertToPercentile = useCallback((value, condition = "overall") => {
+    if (condition === "overall") {
+      if (allCentroidValues.length === 0) return 0;
+      const index = allCentroidValues.findIndex(v => v >= value);
+      return index === -1 ? 1 : index / allCentroidValues.length;
+    } else {
+      const stats = centroidStats[condition];
+      if (!stats || stats.values.length === 0) return 0;
+      const index = stats.values.findIndex(v => v >= value);
+      return index === -1 ? 1 : index / stats.values.length;
+    }
+  }, [allCentroidValues, centroidStats]);
+
+  // Memoized format display value
+  const formatDisplayValue = useCallback((value, isBelow = false) => {
+    if (filterMode === "percentile") {
+      return `${Math.round(value * 100)}%`;
+    } else {
+      if (isBelow) {
+        const minValues = Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined);
+        const overallMin = minValues.length > 0 ? d3.min(minValues) : overallCentroidRange[0];
+        return (overallMin + value * (overallCentroidRange[1] - overallMin)).toFixed(2);
+      } else {
+        const maxValues = Object.values(centroidStats).map(s => s.max).filter(v => v !== undefined);
+        const overallMax = maxValues.length > 0 ? d3.max(maxValues) : overallCentroidRange[1];
+        const overallMin = d3.min(Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined)) || overallCentroidRange[0];
+        return (overallMin + value * (overallMax - overallMin)).toFixed(2);
+      }
+    }
+  }, [filterMode, centroidStats, overallCentroidRange]);
+
+  // Handle input changes (on blur or enter)
+  const handleInputChange = (field, value) => {
+    let numValue;
+    
+    if (filterMode === "percentile") {
+      // For percentile mode: only accept whole numbers 0-100
+      const match = value.match(/^(\d{1,3})\s*%?$/);
+      if (!match) {
+        // Revert to previous value
+        setPendingChanges(prev => ({ ...prev, [field]: false }));
+        return;
+      }
+      numValue = parseInt(match[1], 10);
+      if (numValue < 0 || numValue > 100) {
+        setPendingChanges(prev => ({ ...prev, [field]: false }));
+        return;
+      }
+      numValue = numValue / 100;
+    } else {
+      // For absolute mode: accept decimal numbers
+      numValue = parseFloat(value);
+      if (isNaN(numValue)) {
+        setPendingChanges(prev => ({ ...prev, [field]: false }));
+        return;
+      }
+      
+      if (field === 'below') {
+        const overallMin = overallCentroidRange[0];
+        numValue = (numValue - overallMin) / (overallCentroidRange[1] - overallMin);
+      } else if (field === 'above') {
+        const maxValues = Object.values(centroidStats).map(s => s.max).filter(v => v !== undefined);
+        const overallMax = maxValues.length > 0 ? d3.max(maxValues) : overallCentroidRange[1];
+        const overallMin = d3.min(Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined)) || overallCentroidRange[0];
+        numValue = (numValue - overallMin) / (overallMax - overallMin);
+      } else if (field === 'withinMin' || field === 'withinMax') {
+        const overallMin = overallCentroidRange[0];
+        const overallMax = overallCentroidRange[1];
+        numValue = (parseFloat(value) - overallMin) / (overallMax - overallMin);
+      }
+    }
+    
+    // Clamp value to 0-1 range
+    numValue = Math.max(0, Math.min(1, numValue));
+    
+    // Update filters
+    if (field === 'below' || field === 'above') {
+      setCentroidFilters(prev => ({ ...prev, [field]: numValue }));
+    } else if (field === 'withinMin') {
+      setCentroidFilters(prev => {
+        const newWithin = [...prev.within];
+        newWithin[0] = numValue;
+        if (newWithin[0] > newWithin[1]) newWithin[1] = newWithin[0];
+        return { ...prev, within: newWithin };
+      });
+    } else if (field === 'withinMax') {
+      setCentroidFilters(prev => {
+        const newWithin = [...prev.within];
+        newWithin[1] = numValue;
+        if (newWithin[1] < newWithin[0]) newWithin[0] = newWithin[1];
+        return { ...prev, within: newWithin };
+      });
+    }
+    
+    // Clear pending flag
+    setPendingChanges(prev => ({ ...prev, [field]: false }));
   };
 
-  const handlePointClick = (id) => {
+  // Handle input focus (start editing)
+  const handleInputFocus = (field) => {
+    setPendingChanges(prev => ({ ...prev, [field]: true }));
+  };
+
+  // Handle input blur (apply changes)
+  const handleInputBlur = (field) => {
+    if (pendingChanges[field]) {
+      handleInputChange(field, manualInputs[field]);
+    }
+  };
+
+  // Handle key press (enter to apply)
+  const handleInputKeyPress = (field, e) => {
+    if (e.key === 'Enter') {
+      handleInputChange(field, manualInputs[field]);
+    }
+  };
+
+  // Update manual inputs when filters change
+  useEffect(() => {
+    if (!pendingChanges.below) {
+      setManualInputs(prev => ({ ...prev, below: formatDisplayValue(centroidFilters.below, true) }));
+    }
+    if (!pendingChanges.above) {
+      setManualInputs(prev => ({ ...prev, above: formatDisplayValue(centroidFilters.above, false) }));
+    }
+    if (!pendingChanges.withinMin) {
+      setManualInputs(prev => ({ ...prev, withinMin: formatDisplayValue(centroidFilters.within[0]) }));
+    }
+    if (!pendingChanges.withinMax) {
+      setManualInputs(prev => ({ ...prev, withinMax: formatDisplayValue(centroidFilters.within[1]) }));
+    }
+  }, [centroidFilters, filterMode, pendingChanges, formatDisplayValue]);
+
+  // Handle point click
+  const handlePointClick = useCallback((id) => {
     setSelectedIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -276,14 +370,14 @@ export default function WingCoordinates() {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const clearAllSelections = () => {
+  const clearAllSelections = useCallback(() => {
     setSelectedIds(new Set());
-  };
+  }, []);
 
-  // Handle dual range slider
-  const handleWithinChange = (index, value) => {
+  // Handle within change for sliders
+  const handleWithinChange = useCallback((index, value) => {
     setCentroidFilters(prev => {
       const newWithin = [...prev.within];
       newWithin[index] = Math.max(0, Math.min(1, +value));
@@ -296,101 +390,68 @@ export default function WingCoordinates() {
       
       return { ...prev, within: newWithin };
     });
-  };
+  }, []);
 
-  // Handle manual input changes
-  const handleManualInputChange = (field, value) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return;
-    
-    if (field === 'below' || field === 'above') {
-      setCentroidFilters(prev => ({
-        ...prev,
-        [field]: Math.max(0, Math.min(1, numValue))
-      }));
-    } else if (field === 'withinMin' || field === 'withinMax') {
-      const index = field === 'withinMin' ? 0 : 1;
-      handleWithinChange(index, Math.max(0, Math.min(1, numValue)));
-    }
-  };
-
+  // Main rendering effect
   useEffect(() => {
-    const filteredData = getFilteredData();
     if (filteredData.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
     const width = 875;
-    const height = 640;
+    const height = 645;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
     const plotCenterX = (margin.left + width - margin.right) / 2;
     const plotCenterY = (margin.top + height - margin.bottom) / 2;
     
-// In your useEffect, replace the scaling section:
+    // Get all coordinates for scaling
+    const allCoords = data.map(d => [d.x, d.y]);
+    const xExtent = d3.extent(allCoords, d => d[0]);
+    const yExtent = d3.extent(allCoords, d => d[1]);
 
-// Get all coordinates for scaling - use ALL data for consistent scaling
-const allCoords = data.map(d => [d.x, d.y]);
-const xExtent = d3.extent(allCoords, d => d[0]);
-const yExtent = d3.extent(allCoords, d => d[1]);
+    // Calculate equal scaling
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const xDataRange = xExtent[1] - xExtent[0];
+    const yDataRange = yExtent[1] - yExtent[0];
+    const plotAspectRatio = plotHeight / plotWidth;
+    const dataAspectRatio = yDataRange / xDataRange;
 
-// Calculate the actual plot area dimensions
-const plotWidth = width - margin.left - margin.right;
-const plotHeight = height - margin.top - margin.bottom;
+    let xDomain, yDomain;
+    if (plotAspectRatio > dataAspectRatio) {
+      const xPadding = xDataRange * 0.05;
+      xDomain = [xExtent[0] - xPadding, xExtent[1] + xPadding];
+      const xRangeAdjusted = xDomain[1] - xDomain[0];
+      const yNeededRange = xRangeAdjusted * plotAspectRatio;
+      const yCenter = (yExtent[0] + yExtent[1]) / 2;
+      yDomain = [yCenter - yNeededRange/2, yCenter + yNeededRange/2];
+    } else {
+      const yPadding = yDataRange * 0.05;
+      yDomain = [yExtent[0] - yPadding, yExtent[1] + yPadding];
+      const yRangeAdjusted = yDomain[1] - yDomain[0];
+      const xNeededRange = yRangeAdjusted / plotAspectRatio;
+      const xCenter = (xExtent[0] + xExtent[1]) / 2;
+      xDomain = [xCenter - xNeededRange/2, xCenter + xNeededRange/2];
+    }
 
-// Calculate the data ranges
-const xDataRange = xExtent[1] - xExtent[0];
-const yDataRange = yExtent[1] - yExtent[0];
+    const xScale = d3.scaleLinear()
+      .domain(xDomain)
+      .range([margin.left, width - margin.right]);
 
-// Calculate the aspect ratios
-const plotAspectRatio = plotHeight / plotWidth;
-const dataAspectRatio = yDataRange / xDataRange;
+    const yScale = d3.scaleLinear()
+      .domain(yDomain)
+      .range([height - margin.bottom, margin.top]);
 
-// Determine which dimension needs padding
-let xDomain, yDomain;
-if (plotAspectRatio > dataAspectRatio) {
-  // Plot is taller relative to its width than the data
-  // Need to add padding to Y domain
-  const xPadding = xDataRange * 0.05;
-  xDomain = [xExtent[0] - xPadding, xExtent[1] + xPadding];
-  
-  const xRangeAdjusted = xDomain[1] - xDomain[0];
-  const yNeededRange = xRangeAdjusted * plotAspectRatio;
-  const yCenter = (yExtent[0] + yExtent[1]) / 2;
-  yDomain = [yCenter - yNeededRange/2, yCenter + yNeededRange/2];
-} else {
-  // Plot is wider relative to its height than the data
-  // Need to add padding to X domain
-  const yPadding = yDataRange * 0.05;
-  yDomain = [yExtent[0] - yPadding, yExtent[1] + yPadding];
-  
-  const yRangeAdjusted = yDomain[1] - yDomain[0];
-  const xNeededRange = yRangeAdjusted / plotAspectRatio;
-  const xCenter = (xExtent[0] + xExtent[1]) / 2;
-  xDomain = [xCenter - xNeededRange/2, xCenter + xNeededRange/2];
-}
-
-// Create scales with adjusted domains
-const xScale = d3.scaleLinear()
-  .domain(xDomain)
-  .range([margin.left, width - margin.right]);
-
-const yScale = d3.scaleLinear()
-  .domain(yDomain)
-  .range([height - margin.bottom, margin.top]);
-
-    // Apply zoom transform
     const zoomedXScale = transform.rescaleX(xScale);
     const zoomedYScale = transform.rescaleY(yScale);
 
-    // Setup zoom behavior
     const zoom = d3.zoom()
       .scaleExtent([0.5, 20])
       .translateExtent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
       .on("zoom", (event) => {
-        // If user is manually zooming with the mouse wheel, disable auto-zoom until a new letter is chosen
         if (event.sourceEvent && event.sourceEvent.type === "wheel") {
           setAutoZoomEnabled(false);
         }
@@ -399,29 +460,24 @@ const yScale = d3.scaleLinear()
 
     svg.call(zoom);
 
-    // Auto-zoom to selected letter cluster (only once per selection, and only while enabled)
+    // Auto-zoom logic (same as before but optimized)
     if (focusLetter && autoZoomEnabled && focusLetter !== autoZoomedLetter) {
       const focusPoints = filteredData.filter(d => d.letter === focusLetter);
       if (focusPoints.length > 0) {
         const xVals = focusPoints.map(d => d.x);
         const yVals = focusPoints.map(d => d.y);
-
         const xMin = d3.min(xVals);
         const xMax = d3.max(xVals);
         const yMin = d3.min(yVals);
         const yMax = d3.max(yVals);
-
         const focusXSpan = xMax - xMin || 1;
         const focusYSpan = yMax - yMin || 1;
         const fullXSpan = xDomain[1] - xDomain[0] || 1;
         const fullYSpan = yDomain[1] - yDomain[0] || 1;
-
         const scaleFactor = 1 / Math.max(focusXSpan / fullXSpan, focusYSpan / fullYSpan);
         const clampedScale = Math.max(1, Math.min(20, scaleFactor));
-
         const cx = (xMin + xMax) / 2;
         const cy = (yMin + yMax) / 2;
-
         const cxScreen = xScale(cx);
         const cyScreen = yScale(cy);
 
@@ -440,19 +496,12 @@ const yScale = d3.scaleLinear()
           setAutoZoomedLetter(focusLetter);
         });
       }
-    } else if (!focusLetter) {
-      // Reset zoom to default view when "All letters" is selected
-      if (autoZoomedLetter || transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
-        svg
-          .transition()
-          .duration(200)
-          .call(zoom.transform, d3.zoomIdentity);
-      }
-      // Clear auto-zoom state when reset to all letters
+    } else if (!focusLetter && (autoZoomedLetter || transform.k !== 1 || transform.x !== 0 || transform.y !== 0)) {
+      svg.transition().duration(200).call(zoom.transform, d3.zoomIdentity);
       setAutoZoomedLetter("");
     }
 
-    // Axes with zoom (equal ticks for both axes)
+    // Axes
     mainGroup.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(zoomedXScale).ticks(6))
@@ -481,12 +530,10 @@ const yScale = d3.scaleLinear()
       .style("font-size", "10px")
       .text("Y Coordinate");
 
-    // Create gradients for each condition (darker half only)
+    // Gradients
     const defs = svg.append("defs");
-    
     Object.keys(gradientScales).forEach(condition => {
       const gradientId = `gradient-${condition}`;
-      
       const gradient = defs.append("linearGradient")
         .attr("id", gradientId)
         .attr("x1", "0%")
@@ -494,7 +541,6 @@ const yScale = d3.scaleLinear()
         .attr("x2", "100%")
         .attr("y2", "0%");
 
-      // Create gradient stops for darker half (0.5 to 1.0)
       const stops = createGradientStops(condition);
       gradient.selectAll("stop")
         .data(stops)
@@ -503,7 +549,7 @@ const yScale = d3.scaleLinear()
         .attr("stop-color", d => d.color);
     });
 
-    // Draw connections for ALL selected IDs with matching stroke colors
+    // Connections for selected wings
     Array.from(selectedIds).forEach(selectedId => {
       const selectedWingData = filteredData.filter(d => d.id === selectedId);
       const pointMap = {};
@@ -513,7 +559,6 @@ const yScale = d3.scaleLinear()
 
       connections.forEach(([p1, p2]) => {
         if (pointMap[p1] && pointMap[p2]) {
-          // Get color from first point (matches point color)
           const pointColor = calculatePointColor(pointMap[p1], filterMode, centroidStats, overallCentroidRange);
           mainGroup.append("line")
             .attr("x1", zoomedXScale(pointMap[p1].x))
@@ -527,19 +572,7 @@ const yScale = d3.scaleLinear()
       });
     });
 
-    // Calculate opacity for each point
-    const getOpacity = (d, isHovered = false, hoveredPointId = null) => {
-      if (isHovered) {
-        if (selectedIds.has(d.id)) return 1;
-        if (d.pointId === hoveredPointId) return 0.8;
-        return 0.3;
-      }
-      
-      if (selectedIds.size === 0) return 0.8;
-      return selectedIds.has(d.id) ? 1 : 0.6;
-    };
-
-    // Create tooltip
+    // Tooltip
     const tooltip = d3.select("body").append("div")
       .attr("class", "tooltip")
       .style("position", "absolute")
@@ -558,26 +591,27 @@ const yScale = d3.scaleLinear()
       .attr("class", "point")
       .attr("transform", d => `translate(${zoomedXScale(d.x)}, ${zoomedYScale(d.y)})`)
       .style("cursor", "pointer")
-      .style("opacity", d => getOpacity(d))
-      .on("click", (event, d) => {
-        handlePointClick(d.id);
-      })
+      .style("opacity", d => selectedIds.size === 0 ? 0.8 : selectedIds.has(d.id) ? 1 : 0.6)
+      .on("click", (event, d) => handlePointClick(d.id))
       .on("mouseover", function(event, d) {
         const currentPointId = d.pointId;
-        
         mainGroup.selectAll("g.point")
           .transition()
           .duration(200)
-          .style("opacity", point => getOpacity(point, true, currentPointId));
+          .style("opacity", point => {
+            if (selectedIds.has(point.id)) return 1;
+            if (point.pointId === currentPointId) return 0.8;
+            return 0.3;
+          });
 
         let normalizedSize;
         let sizeDisplay;
         if (filterMode === "percentile") {
           normalizedSize = convertToPercentile(d.centroidSize, d.condition);
-          sizeDisplay = `${(normalizedSize * 100).toFixed(1)}% (${d.centroidSize.toFixed(2)})`;
+          sizeDisplay = `${Math.round(normalizedSize * 100)}% (${d.centroidSize.toFixed(2)})`;
         } else {
           normalizedSize = (d.centroidSize - overallCentroidRange[0]) / (overallCentroidRange[1] - overallCentroidRange[0]);
-          sizeDisplay = `${d.centroidSize.toFixed(2)} (${(normalizedSize * 100).toFixed(1)}%)`;
+          sizeDisplay = `${d.centroidSize.toFixed(2)} (${Math.round(normalizedSize * 100)}%)`;
         }
         
         tooltip
@@ -602,19 +636,16 @@ const yScale = d3.scaleLinear()
         mainGroup.selectAll("g.point")
           .transition()
           .duration(200)
-          .style("opacity", d => getOpacity(d));
-        
+          .style("opacity", d => selectedIds.size === 0 ? 0.8 : selectedIds.has(d.id) ? 1 : 0.6);
         tooltip.style("opacity", 0);
       });
 
-    // Add circles for points with gradient colors - stroke matches fill for selected
     points.append("circle")
       .attr("r", 6)
       .attr("fill", d => calculatePointColor(d, filterMode, centroidStats, overallCentroidRange))
       .attr("stroke", d => selectedIds.has(d.id) ? calculatePointColor(d, filterMode, centroidStats, overallCentroidRange) : "#fff")
       .attr("stroke-width", d => selectedIds.has(d.id) ? 2 : 1);
 
-    // Add letters for points
     points.append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0.3em")
@@ -624,10 +655,9 @@ const yScale = d3.scaleLinear()
       .style("pointer-events", "none")
       .text(d => d.letter);
 
-    // Condition Filter Legend with Gradient Bars (darker half only: 0.5 to 1.0)
+    // Legend
     const legendX = 60;
     const legendY = margin.top + 25;
-
     mainGroup.append("text")
       .attr("x", legendX)
       .attr("y", legendY - 12)
@@ -640,13 +670,9 @@ const yScale = d3.scaleLinear()
         .attr("transform", `translate(${legendX}, ${legendY + i * 25})`)
         .style("cursor", "pointer")
         .on("click", () => {
-          setVisibleConditions(prev => ({
-            ...prev,
-            [condition]: !prev[condition]
-          }));
+          setVisibleConditions(prev => ({ ...prev, [condition]: !prev[condition] }));
         });
 
-      // Checkbox
       legendItem.append("rect")
         .attr("x", -15)
         .attr("y", -8)
@@ -656,10 +682,7 @@ const yScale = d3.scaleLinear()
         .attr("stroke", "#333")
         .attr("stroke-width", 1);
 
-      // Gradient bar using the pre-defined gradient
       const gradientId = `gradient-${condition}`;
-      
-      // Gradient bar rectangle
       legendItem.append("rect")
         .attr("x", 5)
         .attr("y", -6)
@@ -668,7 +691,6 @@ const yScale = d3.scaleLinear()
         .attr("fill", `url(#${gradientId})`)
         .attr("opacity", visibleConditions[condition] ? 1 : 0.3);
 
-      // Label
       legendItem.append("text")
         .attr("x", 90)
         .attr("y", 2)
@@ -677,59 +699,10 @@ const yScale = d3.scaleLinear()
         .text(condition);
     });
 
-    // Instructions
-    mainGroup.append("text")
-      .attr("x", 10)
-      .attr("y", 20)
-      .style("font-size", "14px")
-      .style("fill", "#000")
-      .text("Click any point to map the wing");
-
     return () => {
       tooltip.remove();
     };
-  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform, focusLetter, autoZoomedLetter, autoZoomEnabled]);
-
-  // Format display value based on filter mode
-  const formatDisplayValue = (value, isBelow = false) => {
-    if (filterMode === "percentile") {
-      return `${(value * 100).toFixed(1)}%`;
-    } else {
-      const absoluteValue = getFilterValue(value, isBelow);
-      return absoluteValue.toFixed(2);
-    }
-  };
-
-  // Parse manual input and update filters
-  const handleManualInput = (field, inputValue) => {
-    let value;
-    if (filterMode === "percentile") {
-      // Parse percentage input
-      const match = inputValue.match(/(\d+(\.\d+)?)\s*%/);
-      if (match) {
-        value = parseFloat(match[1]) / 100;
-      } else {
-        value = parseFloat(inputValue);
-        if (value > 1) value = value / 100; // Assume it's a percentage without %
-      }
-    } else {
-      value = parseFloat(inputValue);
-      // Convert to normalized value
-      if (field === 'below') {
-        const overallMin = overallCentroidRange[0];
-        value = (value - overallMin) / (overallCentroidRange[1] - overallMin);
-      } else {
-        const maxValues = Object.values(centroidStats).map(s => s.max).filter(v => v !== undefined);
-        const overallMax = maxValues.length > 0 ? d3.max(maxValues) : overallCentroidRange[1];
-        const overallMin = d3.min(Object.values(centroidStats).map(s => s.min).filter(v => v !== undefined)) || overallCentroidRange[0];
-        value = (value - overallMin) / (overallMax - overallMin);
-      }
-    }
-    
-    if (!isNaN(value)) {
-      handleManualInputChange(field, Math.max(0, Math.min(1, value)));
-    }
-  };
+  }, [data, selectedIds, visibleConditions, centroidFilters, sexFilters, filterMode, centroidStats, overallCentroidRange, transform, focusLetter, autoZoomedLetter, autoZoomEnabled, filteredData, handlePointClick, convertToPercentile]);
 
   return (
     <div style={{ padding: "8px", backgroundColor: "#fff" }}>
@@ -743,7 +716,6 @@ const yScale = d3.scaleLinear()
         borderRadius: "5px",
         border: "1px solid #dee2e6"
       }}>
-
         {/* Auto-zoom to letter cluster */}
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
           <label style={{ fontWeight: "bold", fontSize: "12px" }}>Zoom to:</label>
@@ -765,9 +737,7 @@ const yScale = d3.scaleLinear()
           >
             <option value="">All landmarks (reset zoom)</option>
             {Array.from({ length: 15 }, (_, i) => String.fromCharCode(65 + i)).map(letter => (
-              <option key={letter} value={letter}>
-                {letter}
-              </option>
+              <option key={letter} value={letter}>{letter}</option>
             ))}
           </select>
           <span style={{ fontSize: "12px", color: "#666" }}>
@@ -775,7 +745,7 @@ const yScale = d3.scaleLinear()
           </span>
         </div>
         
-                {/* Sex Filter */}
+        {/* Sex Filter */}
         <div style={{ marginBottom: "10px" }}>
           <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
           {['female', 'male'].map(sex => (
@@ -816,12 +786,12 @@ const yScale = d3.scaleLinear()
               Absolute Value
             </label>
           </div>
-                  <div style={{marginTop: "4px", fontSize: "12px", color: "#666"}}>
-          {filterMode === "percentile" ? 
-            "Values relative to each condition's distribution (0% = smallest, 100% = largest)." :
-            "Values are actual centroid size measurements."
-          }
-        </div>
+          <div style={{marginTop: "4px", fontSize: "12px", color: "#666"}}>
+            {filterMode === "percentile" ? 
+              "Values relative to each condition's distribution (0% = smallest, 100% = largest). Whole numbers only." :
+              "Values are actual centroid size measurements."
+            }
+          </div>
         </div>
 
         {/* Centroid Size Filters */}
@@ -832,17 +802,22 @@ const yScale = d3.scaleLinear()
               Show below: 
             </label>
             <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.below, true)}
-                onChange={(e) => handleManualInput('below', e.target.value)}
-                style={{ 
-                  width: "40px", 
-                  padding: "2px 4px", 
-                  fontSize: "12px",
-                  border: "1px solid #ccc",
-                  borderRadius: "2px"
-                }}
-              />
+              type="text"
+              value={manualInputs.below}
+              onChange={(e) => setManualInputs(prev => ({ ...prev, below: e.target.value }))}
+              onFocus={() => handleInputFocus('below')}
+              onBlur={() => handleInputBlur('below')}
+              onKeyPress={(e) => handleInputKeyPress('below', e)}
+              style={{ 
+                width: "60px", 
+                padding: "2px 4px", 
+                fontSize: "12px",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                backgroundColor: pendingChanges.below ? "#ffffe0" : "white"
+              }}
+              placeholder={filterMode === "percentile" ? "0-100%" : "value"}
+            />
             <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
@@ -850,7 +825,10 @@ const yScale = d3.scaleLinear()
                 max="1"
                 step="0.01"
                 value={centroidFilters.below}
-                onChange={(e) => setCentroidFilters(prev => ({ ...prev, below: +e.target.value }))}
+                onChange={(e) => {
+                  setCentroidFilters(prev => ({ ...prev, below: +e.target.value }));
+                  setPendingChanges(prev => ({ ...prev, below: false }));
+                }}
                 style={{ flex: 1, height: "6px" }}
               />
             </div>
@@ -862,17 +840,22 @@ const yScale = d3.scaleLinear()
               And above: 
             </label>
             <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.above, false)}
-                onChange={(e) => handleManualInput('above', e.target.value)}
-                style={{ 
-                  width: "40px", 
-                  padding: "2px 4px", 
-                  fontSize: "12px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-              />
+              type="text"
+              value={manualInputs.above}
+              onChange={(e) => setManualInputs(prev => ({ ...prev, above: e.target.value }))}
+              onFocus={() => handleInputFocus('above')}
+              onBlur={() => handleInputBlur('above')}
+              onKeyPress={(e) => handleInputKeyPress('above', e)}
+              style={{ 
+                width: "60px", 
+                padding: "2px 4px", 
+                fontSize: "12px",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                backgroundColor: pendingChanges.above ? "#ffffe0" : "white"
+              }}
+              placeholder={filterMode === "percentile" ? "0-100%" : "value"}
+            />
             <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
@@ -880,7 +863,10 @@ const yScale = d3.scaleLinear()
                 max="1"
                 step="0.01"
                 value={centroidFilters.above}
-                onChange={(e) => setCentroidFilters(prev => ({ ...prev, above: +e.target.value }))}
+                onChange={(e) => {
+                  setCentroidFilters(prev => ({ ...prev, above: +e.target.value }));
+                  setPendingChanges(prev => ({ ...prev, above: false }));
+                }}
                 style={{ 
                   flex: 1,
                   height: "8px",
@@ -891,48 +877,53 @@ const yScale = d3.scaleLinear()
           </div>
 
           {/* Within Filter */}
-          
           <div>
-            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "2px", fontSize: "12px" }}>
-              Within: 
+            <label style={{ fontWeight: "bold", marginBottom: "4px", fontSize: "12px" }}>
+              Within:
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "5px" }}>
               <input
                 type="text"
-                value={formatDisplayValue(centroidFilters.within[0])}
-                onChange={(e) => handleManualInput('withinMin', e.target.value)}
+                value={manualInputs.withinMin}
+                onChange={(e) => setManualInputs(prev => ({ ...prev, withinMin: e.target.value }))}
+                onFocus={() => handleInputFocus('withinMin')}
+                onBlur={() => handleInputBlur('withinMin')}
+                onKeyPress={(e) => handleInputKeyPress('withinMin', e)}
                 style={{ 
-                  width: "40px", 
+                  width: "60px", 
                   padding: "2px 4px", 
-                  marginLeft: "4px",
-                  marginRight: "4px",
                   fontSize: "12px",
                   border: "1px solid #ccc",
-                  borderRadius: "3px"
+                  borderRadius: "3px",
+                  backgroundColor: pendingChanges.withinMin ? "#ffffe0" : "white"
                 }}
                 placeholder="Min"
               />
-              <span style={{ fontSize: "12px", lineHeight: "24px" }}>to</span>
+              <span style={{ fontSize: "12px" }}>to</span>
               <input
                 type="text"
-                value={formatDisplayValue(centroidFilters.within[1])}
-                onChange={(e) => handleManualInput('withinMax', e.target.value)}
+                value={manualInputs.withinMax}
+                onChange={(e) => setManualInputs(prev => ({ ...prev, withinMax: e.target.value }))}
+                onFocus={() => handleInputFocus('withinMax')}
+                onBlur={() => handleInputBlur('withinMax')}
+                onKeyPress={(e) => handleInputKeyPress('withinMax', e)}
                 style={{ 
-                  width: "45px", 
-                  marginLeft: "4px",
-                  marginRight: "4px",
-                  padding: "4px 4px", 
+                  width: "60px", 
+                  padding: "2px 4px", 
                   fontSize: "12px",
                   border: "1px solid #ccc",
-                  borderRadius: "3px"
+                  borderRadius: "3px",
+                  backgroundColor: pendingChanges.withinMax ? "#ffffe0" : "white"
                 }}
                 placeholder="Max"
               />
-            </label>
+            </div>
           </div>
         </div>
       </div>
       
       <div style={{ color: "green", marginBottom: "10px", fontSize: "12px" }}>
-        Showing {getFilteredData().length} of {data.length} landmark points
+        Showing {filteredData.length} of {data.length} landmark points
         {selectedIds.size > 0 && ` • ${selectedIds.size} wing(s) selected`}
       </div>
       
@@ -943,7 +934,6 @@ const yScale = d3.scaleLinear()
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 
-      {/* Selected Wings List */}
       {selectedIds.size > 0 && (
         <div style={{ 
           marginTop: "10px", 
