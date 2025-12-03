@@ -340,7 +340,7 @@ export default function WingCoordinates() {
     svg.selectAll("*").remove();
 
     const width = 875;
-    const height = 625;
+    const height = 680;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
@@ -730,7 +730,7 @@ export default function WingCoordinates() {
   };
 
   return (
-    <div style={{ padding: "10px", backgroundColor: "#fff" }}>
+    <div style={{ padding: "8px", backgroundColor: "#fff" }}>
       <h2>Wing Coordinate Landmarks</h2>
       
       {/* Filter Controls */}
@@ -806,9 +806,25 @@ export default function WingCoordinates() {
           </div>
         </div>
         
+                {/* Sex Filter */}
+        <div style={{ marginBottom: "10px" }}>
+          <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
+          {['female', 'male'].map(sex => (
+            <label key={sex} style={{ marginRight: "10px", fontSize: "12px" }}>
+              <input
+                type="checkbox"
+                checked={sexFilters[sex]}
+                onChange={(e) => setSexFilters(prev => ({ ...prev, [sex]: e.target.checked }))}
+                style={{ marginRight: "4px" }}
+              />
+              {sex.charAt(0).toUpperCase() + sex.slice(1)}
+            </label>
+          ))}
+        </div>
+        
         {/* Filter Mode Toggle */}
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "15px" }}>
-          <label style={{ fontWeight: "bold", fontSize: "12px" }}>Filter by:</label>
+          <label style={{ fontWeight: "bold", fontSize: "12px" }}>Filter size by:</label>
           <div style={{ display: "flex", gap: "10px" }}>
             <label style={{ fontSize: "12px" }}>
               <input
@@ -915,8 +931,10 @@ export default function WingCoordinates() {
                 value={formatDisplayValue(centroidFilters.within[0])}
                 onChange={(e) => handleManualInput('withinMin', e.target.value)}
                 style={{ 
-                  width: "70px", 
+                  width: "40px", 
                   padding: "2px 4px", 
+                  marginLeft: "4px",
+                  marginRight: "4px",
                   fontSize: "12px",
                   border: "1px solid #ccc",
                   borderRadius: "3px"
@@ -929,8 +947,10 @@ export default function WingCoordinates() {
                 value={formatDisplayValue(centroidFilters.within[1])}
                 onChange={(e) => handleManualInput('withinMax', e.target.value)}
                 style={{ 
-                  width: "70px", 
-                  padding: "2px 4px", 
+                  width: "45px", 
+                  marginLeft: "4px",
+                  marginRight: "4px",
+                  padding: "4px 4px", 
                   fontSize: "12px",
                   border: "1px solid #ccc",
                   borderRadius: "3px"
@@ -1027,22 +1047,6 @@ export default function WingCoordinates() {
             {/* Manual inputs for within range */}
           </div>
         </div>
-        
-        {/* Sex Filter */}
-        <div style={{ marginBottom: "10px" }}>
-          <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
-          {['female', 'male'].map(sex => (
-            <label key={sex} style={{ marginRight: "10px", fontSize: "12px" }}>
-              <input
-                type="checkbox"
-                checked={sexFilters[sex]}
-                onChange={(e) => setSexFilters(prev => ({ ...prev, [sex]: e.target.checked }))}
-                style={{ marginRight: "4px" }}
-              />
-              {sex.charAt(0).toUpperCase() + sex.slice(1)}
-            </label>
-          ))}
-        </div>
       </div>
       
       <div style={{ color: "green", marginBottom: "10px", fontSize: "12px" }}>
@@ -1053,7 +1057,7 @@ export default function WingCoordinates() {
       <svg
         ref={svgRef}
         width={875}
-        height={625}
+        height={680}
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 

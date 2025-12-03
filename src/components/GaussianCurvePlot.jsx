@@ -127,9 +127,9 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     const width = dimensions.width;
     const height = dimensions.height;
 
-    const margin = { top: 48, right: 48, bottom: 60, left: 54 };
-    const plotWidth = Math.min(width - margin.left - margin.right, 400);
-    const plotHeight = Math.min(height - margin.top - margin.bottom, 320);
+    const margin = { top: 30, right: 48, bottom: 60, left: 54 };
+    const plotWidth = 215;
+    const plotHeight = 170;
 
     const mainGroup = svg.append("g");
 
@@ -146,7 +146,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
 
     const yScale = d3
       .scaleLinear()
-      .domain(yExtent)
+      .domain([0, 1])
       .range([margin.top + plotHeight, margin.top]);
 
     // Grid lines
@@ -252,8 +252,8 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     }
 
     // Legend
-    const legendX = margin.left + 35;
-    const legendY = margin.top + 24;
+    const legendX = margin.left + 87;
+    const legendY = margin.top + plotHeight - 45;
 
     mainGroup
       .append("text")
