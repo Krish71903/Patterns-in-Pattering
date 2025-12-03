@@ -322,38 +322,64 @@ export default function WingCoordinates() {
     svg.selectAll("*").remove();
 
     const width = 875;
-    const height = 680;
+    const height = 640;
     const margin = { top: 36, right: 12, bottom: 24, left: 36 };
 
     const mainGroup = svg.append("g");
     const plotCenterX = (margin.left + width - margin.right) / 2;
     const plotCenterY = (margin.top + height - margin.bottom) / 2;
-
-    // Get all coordinates for scaling - use ALL data for consistent scaling
-    const allCoords = data.map(d => [d.x, d.y]);
-    const xExtent = d3.extent(allCoords, d => d[0]);
-    const yExtent = d3.extent(allCoords, d => d[1]);
-
-    // Calculate equal scaling for X and Y axes
-    const xRange = xExtent[1] - xExtent[0];
-    const yRange = yExtent[1] - yExtent[0];
-    const maxRange = Math.max(xRange, yRange);
     
-    // Center the data in the plot area
-    const xCenter = (xExtent[0] + xExtent[1]) / 2;
-    const yCenter = (yExtent[0] + yExtent[1]) / 2;
-    
-    const xDomain = [xCenter - maxRange/2, xCenter + maxRange/2];
-    const yDomain = [yCenter - maxRange/2, yCenter + maxRange/2];
+// In your useEffect, replace the scaling section:
 
-    // Create scales with equal domains
-    const xScale = d3.scaleLinear()
-      .domain(xDomain)
-      .range([margin.left, width - margin.right]);
+// Get all coordinates for scaling - use ALL data for consistent scaling
+const allCoords = data.map(d => [d.x, d.y]);
+const xExtent = d3.extent(allCoords, d => d[0]);
+const yExtent = d3.extent(allCoords, d => d[1]);
 
-    const yScale = d3.scaleLinear()
-      .domain(yDomain)
-      .range([height - margin.bottom, margin.top]);
+// Calculate the actual plot area dimensions
+const plotWidth = width - margin.left - margin.right;
+const plotHeight = height - margin.top - margin.bottom;
+
+// Calculate the data ranges
+const xDataRange = xExtent[1] - xExtent[0];
+const yDataRange = yExtent[1] - yExtent[0];
+
+// Calculate the aspect ratios
+const plotAspectRatio = plotHeight / plotWidth;
+const dataAspectRatio = yDataRange / xDataRange;
+
+// Determine which dimension needs padding
+let xDomain, yDomain;
+if (plotAspectRatio > dataAspectRatio) {
+  // Plot is taller relative to its width than the data
+  // Need to add padding to Y domain
+  const xPadding = xDataRange * 0.05;
+  xDomain = [xExtent[0] - xPadding, xExtent[1] + xPadding];
+  
+  const xRangeAdjusted = xDomain[1] - xDomain[0];
+  const yNeededRange = xRangeAdjusted * plotAspectRatio;
+  const yCenter = (yExtent[0] + yExtent[1]) / 2;
+  yDomain = [yCenter - yNeededRange/2, yCenter + yNeededRange/2];
+} else {
+  // Plot is wider relative to its height than the data
+  // Need to add padding to X domain
+  const yPadding = yDataRange * 0.05;
+  yDomain = [yExtent[0] - yPadding, yExtent[1] + yPadding];
+  
+  const yRangeAdjusted = yDomain[1] - yDomain[0];
+  const xNeededRange = yRangeAdjusted / plotAspectRatio;
+  const xCenter = (xExtent[0] + xExtent[1]) / 2;
+  xDomain = [xCenter - xNeededRange/2, xCenter + xNeededRange/2];
+}
+
+// Create scales with adjusted domains
+const xScale = d3.scaleLinear()
+  .domain(xDomain)
+  .range([margin.left, width - margin.right]);
+
+const yScale = d3.scaleLinear()
+  .domain(yDomain)
+  .range([height - margin.bottom, margin.top]);
 
     // Apply zoom transform
     const zoomedXScale = transform.rescaleX(xScale);
@@ -442,7 +468,7 @@ export default function WingCoordinates() {
     // Labels
     mainGroup.append("text")
       .attr("x", width / 2)
-      .attr("y", height - 6)
+      .attr("y", height + 2)
       .attr("text-anchor", "middle")
       .style("font-size", "10px")
       .text("X Coordinate");
@@ -496,7 +522,7 @@ export default function WingCoordinates() {
             .attr("y2", zoomedYScale(pointMap[p2].y))
             .attr("stroke", pointColor)
             .attr("stroke-width", 2)
-            .attr("opacity", 0.9);
+            .attr("opacity", 0.8);
         }
       });
     });
@@ -864,7 +890,7 @@ export default function WingCoordinates() {
             </div>
           </div>
 
-          {/* Within Filter - Dual range slider */}
+          {/* Within Filter */}
           
           <div>
             <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "2px", fontSize: "12px" }}>
@@ -901,93 +927,6 @@ export default function WingCoordinates() {
                 placeholder="Max"
               />
             </label>
-            <div style={{ position: "relative", height: "25px" }}>
-              {/* Background track */}
-              <div style={{
-                position: "absolute",
-                top: "50%",
-                left: "0",
-                right: "0",
-                height: "4px",
-                background: "#ddd",
-                transform: "translateY(-50%)",
-                borderRadius: "2px"
-              }}></div>
-              
-              {/* Active range */}
-              <div style={{
-                position: "absolute",
-                left: `${centroidFilters.within[0] * 100}%`,
-                right: `${(1 - centroidFilters.within[1]) * 100}%`,
-                top: "50%",
-                height: "4px",
-                background: "#2196F3",
-                transform: "translateY(-50%)",
-                borderRadius: "2px"
-              }}></div>
-              
-              {/* Hidden input handles */}
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={centroidFilters.within[0]}
-                onChange={(e) => handleWithinChange(0, e.target.value)}
-                style={{
-                  position: "absolute",
-                  width: "100%",
-                  height: "100%",
-                  opacity: 0,
-                  cursor: "pointer",
-                  zIndex: 2
-                }}
-              />
-              
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={centroidFilters.within[1]}
-                onChange={(e) => handleWithinChange(1, e.target.value)}
-                style={{
-                  position: "absolute",
-                  width: "100%",
-                  height: "100%",
-                  opacity: 0,
-                  cursor: "pointer",
-                  zIndex: 2
-                }}
-              />
-              
-              {/* Visual handles */}
-              <div style={{
-                position: "absolute",
-                left: `${centroidFilters.within[0] * 100}%`,
-                top: "50%",
-                width: "12px",
-                height: "12px",
-                background: "#2196F3",
-                borderRadius: "50%",
-                transform: "translate(-50%, -50%)",
-                cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-              }}></div>
-              <div style={{
-                position: "absolute",
-                left: `${centroidFilters.within[1] * 100}%`,
-                top: "50%",
-                width: "12px",
-                height: "12px",
-                background: "#2196F3",
-                borderRadius: "50%",
-                transform: "translate(-50%, -50%)",
-                cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-              }}></div>
-            </div>
-            {/* Manual inputs for within range */}
           </div>
         </div>
       </div>
@@ -1000,7 +939,7 @@ export default function WingCoordinates() {
       <svg
         ref={svgRef}
         width={875}
-        height={680}
+        height={645}
         style={{ border: "1px solid #ddd", backgroundColor: "white" }}
       ></svg>
 
