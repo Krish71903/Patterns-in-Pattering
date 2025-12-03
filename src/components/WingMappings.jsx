@@ -627,11 +627,11 @@ export default function WingCoordinates() {
 
     // Instructions
     mainGroup.append("text")
-      .attr("x", 40)
-      .attr("y", height - 30)
+      .attr("x", 10)
+      .attr("y", 20)
       .style("font-size", "14px")
       .style("fill", "#000")
-      .text("Click to map wing  •  Scroll to zoom  •  Drag to pan");
+      .text("Click any point to map the wing");
 
     return () => {
       tooltip.remove();
@@ -694,7 +694,7 @@ export default function WingCoordinates() {
 
         {/* Auto-zoom to letter cluster */}
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <label style={{ fontWeight: "bold", fontSize: "12px" }}>Auto-zoom to letter cluster:</label>
+          <label style={{ fontWeight: "bold", fontSize: "12px" }}>Zoom to:</label>
           <select
             value={focusLetter}
             onChange={(e) => {
@@ -711,15 +711,15 @@ export default function WingCoordinates() {
               backgroundColor: "#fff"
             }}
           >
-            <option value="">All letters (reset zoom)</option>
+            <option value="">All landmarks (reset zoom)</option>
             {Array.from({ length: 15 }, (_, i) => String.fromCharCode(65 + i)).map(letter => (
               <option key={letter} value={letter}>
                 {letter}
               </option>
             ))}
           </select>
-          <span style={{ fontSize: "11px", color: "#666" }}>
-            Choose a landmark letter to zoom into all points with that tag.
+          <span style={{ fontSize: "12px", color: "#666" }}>
+            Choose a landmark letter to zoom in on all points of that tag.
           </span>
         </div>
         
@@ -743,30 +743,39 @@ export default function WingCoordinates() {
                 name="filterMode"
                 checked={filterMode === "absolute"}
                 onChange={() => setFilterMode("absolute")}
-                style={{ marginRight: "4px" }}
+                style={{ marginRight: "2px" }}
               />
               Absolute Value
             </label>
           </div>
-        </div>
-        
-        {/* Filter Mode Explanation */}
-        <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                  <div style={{marginTop: "4px", fontSize: "12px", color: "#666"}}>
           {filterMode === "percentile" ? 
-            "Percentile mode: Values are relative to each condition's distribution (0% = smallest, 100% = largest per condition)." :
-            "Absolute mode: Values are actual centroid size measurements across all conditions."
+            "Values relative to each condition's distribution (0% = smallest, 100% = largest)." :
+            "Values are actual centroid size measurements."
           }
         </div>
-
+        </div>
 
         {/* Centroid Size Filters */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
           {/* Below Filter */}
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
+            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
               Show below: 
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.below, true)}
+                onChange={(e) => handleManualInput('below', e.target.value)}
+                style={{ 
+                  width: "40px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "2px"
+                }}
+              />
+            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
                 min="0"
@@ -776,27 +785,27 @@ export default function WingCoordinates() {
                 onChange={(e) => setCentroidFilters(prev => ({ ...prev, below: +e.target.value }))}
                 style={{ flex: 1, height: "6px" }}
               />
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.below, true)}
-                onChange={(e) => handleManualInput('below', e.target.value)}
-                style={{ 
-                  width: "60px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-              />
             </div>
           </div>
 
           {/* Above Filter */}
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
+            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
               And above: 
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.above, false)}
+                onChange={(e) => handleManualInput('above', e.target.value)}
+                style={{ 
+                  width: "40px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "3px"
+                }}
+              />
+            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
                 min="0"
@@ -806,29 +815,45 @@ export default function WingCoordinates() {
                 onChange={(e) => setCentroidFilters(prev => ({ ...prev, above: +e.target.value }))}
                 style={{ 
                   flex: 1,
-                  height: "6px",
-                  background: `linear-gradient(to right, #ddd ${centroidFilters.above * 100}%, #4CAF50 ${centroidFilters.above * 100}%)`
-                }}
-              />
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.above, false)}
-                onChange={(e) => handleManualInput('above', e.target.value)}
-                style={{ 
-                  width: "60px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
+                  height: "8px",
+                  background: `linear-gradient(to right, #4CAF50 ${centroidFilters.above * 100}%, #ddd ${centroidFilters.above * 100}%)`
                 }}
               />
             </div>
           </div>
 
           {/* Within Filter - Dual range slider */}
+          
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
-              Within: {formatDisplayValue(centroidFilters.within[0])} - {formatDisplayValue(centroidFilters.within[1])}
+            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "2px", fontSize: "12px" }}>
+              Within: 
+              <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.within[0])}
+                onChange={(e) => handleManualInput('withinMin', e.target.value)}
+                style={{ 
+                  width: "70px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "3px"
+                }}
+                placeholder="Min"
+              />
+              <span style={{ fontSize: "12px", lineHeight: "24px" }}>to</span>
+              <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.within[1])}
+                onChange={(e) => handleManualInput('withinMax', e.target.value)}
+                style={{ 
+                  width: "70px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "3px"
+                }}
+                placeholder="Max"
+              />
             </label>
             <div style={{ position: "relative", height: "25px" }}>
               {/* Background track */}
@@ -917,35 +942,6 @@ export default function WingCoordinates() {
               }}></div>
             </div>
             {/* Manual inputs for within range */}
-            <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.within[0])}
-                onChange={(e) => handleManualInput('withinMin', e.target.value)}
-                style={{ 
-                  width: "70px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-                placeholder="Min"
-              />
-              <span style={{ fontSize: "11px", lineHeight: "24px" }}>to</span>
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.within[1])}
-                onChange={(e) => handleManualInput('withinMax', e.target.value)}
-                style={{ 
-                  width: "70px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-                placeholder="Max"
-              />
-            </div>
           </div>
         </div>
         
@@ -1000,7 +996,7 @@ export default function WingCoordinates() {
                 border: "none",
                 borderRadius: "3px",
                 cursor: "pointer",
-                fontSize: "11px"
+                fontSize: "12px"
               }}
             >
               Clear All
