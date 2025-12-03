@@ -12,6 +12,8 @@ const colors = {
 export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
+  const scatterPointsRef = useRef(null);
+  const brushAnimationFrameRef = useRef(null);
 
   const [scatterData, setScatterData] = useState([]);
   const [visibleConditions, setVisibleConditions] = useState({
@@ -245,9 +247,27 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         hitAreaGroup.style("pointer-events", "none");
       })
       .on("brush", (event) => {
-        // Update selection in real-time for smooth brushing
-        const sel = event.selection;
-        if (sel) {
+        // Cancel any pending animation frame
+        if (brushAnimationFrameRef.current) {
+          cancelAnimationFrame(brushAnimationFrameRef.current);
+        }
+
+        // Use requestAnimationFrame to throttle updates for smooth performance
+        brushAnimationFrameRef.current = requestAnimationFrame(() => {
+          const sel = event.selection;
+          if (!sel) {
+            // Clear selection visually immediately
+            if (scatterPointsRef.current) {
+              scatterPointsRef.current
+                .attr("opacity", 0.7);
+            }
+            // Update state to clear selection
+            setSelectedDiscIDs([]);
+            setBrushSelection(null);
+            onSelectionChange([]);
+            return;
+          }
+
           const [[x0, y0], [x1, y1]] = sel;
           // Ensure we get min/max correctly regardless of drag direction
           const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
@@ -256,31 +276,52 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           const dMin = Math.min(yScale.invert(y0), yScale.invert(y1));
           const dMax = Math.max(yScale.invert(y0), yScale.invert(y1));
 
-          const selected = filteredData
-            .filter((d) => 
-              d.area >= areaMin && 
-              d.area <= areaMax &&
-              d.D >= dMin &&
-              d.D <= dMax
-            )
-            .map((d) => d.disc);
+          // Create Set for O(1) lookup performance
+          const selectedSet = new Set();
+          filteredData.forEach((d) => {
+            // Precise boundary checking with inclusive edges
+            if (d.area >= areaMin && 
+                d.area <= areaMax &&
+                d.D >= dMin &&
+                d.D <= dMax) {
+              selectedSet.add(d.disc);
+            }
+          });
 
+          // Update visual opacity directly via D3 for instant feedback (no React re-render)
+          if (scatterPointsRef.current) {
+            scatterPointsRef.current
+              .attr("opacity", (d) => {
+                return selectedSet.has(d.disc) ? 0.9 : 0.15;
+              });
+          }
+
+          // Update React state only for final selection tracking
+          const selected = Array.from(selectedSet);
           setSelectedDiscIDs(selected);
           setBrushSelection({
             area: [areaMin, areaMax],
             d: [dMin, dMax]
           });
           onSelectionChange(selected);
-        } else {
-          // Clear selection if no selection
+        });
+      })
+      .on("end", (event) => {
+        // Cancel any pending animation frame
+        if (brushAnimationFrameRef.current) {
+          cancelAnimationFrame(brushAnimationFrameRef.current);
+          brushAnimationFrameRef.current = null;
+        }
+
+        // Finalize selection update
+        const sel = event.selection;
+        if (!sel) {
           setSelectedDiscIDs([]);
           setBrushSelection(null);
           onSelectionChange([]);
         }
-      })
-      .on("end", (event) => {
-        // Selection is already updated in real-time during brush event
-        // Just re-enable hit area interactions after brush ends
+        
+        // Re-enable hit area interactions after brush ends
         hitAreaGroup.style("pointer-events", "all");
       });
 
@@ -334,7 +375,7 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       });
 
     // Then create the visible scatter points
-    mainGroup
+    scatterPointsRef.current = mainGroup
       .selectAll("path.scatter")
       .data(filteredData)
       .join("path")
@@ -517,6 +558,15 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     onSelectionChange,
     dimensions
   ]);
+
+  // Cleanup animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (brushAnimationFrameRef.current) {
+        cancelAnimationFrame(brushAnimationFrameRef.current);
+      }
+    };
+  }, []);
 
   // Format range display
   const formatRange = (range) => {
