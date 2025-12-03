@@ -617,11 +617,11 @@ export default function WingCoordinates() {
 
     // Instructions
     mainGroup.append("text")
-      .attr("x", 40)
-      .attr("y", height - 30)
+      .attr("x", 10)
+      .attr("y", 20)
       .style("font-size", "14px")
       .style("fill", "#000")
-      .text("Click to map wing  •  Scroll to zoom  •  Drag to pan");
+      .text("Click any point to map the wing");
 
     return () => {
       tooltip.remove();
@@ -708,7 +708,7 @@ export default function WingCoordinates() {
               </option>
             ))}
           </select>
-          <span style={{ fontSize: "11px", color: "#666" }}>
+          <span style={{ fontSize: "12px", color: "#666" }}>
             Choose a landmark letter to zoom into all points with that tag.
           </span>
         </div>
@@ -738,25 +738,34 @@ export default function WingCoordinates() {
               Absolute Value
             </label>
           </div>
-        </div>
-        
-        {/* Filter Mode Explanation */}
-        <div style={{ marginTop: "8px", fontSize: "11px", color: "#666" }}>
+                  <div style={{marginTop: "5px", fontSize: "12px", color: "#666"}}>
           {filterMode === "percentile" ? 
-            "Percentile mode: Values are relative to each condition's distribution (0% = smallest, 100% = largest per condition)." :
-            "Absolute mode: Values are actual centroid size measurements across all conditions."
+            "Values relative to each condition's distribution (0% = smallest, 100% = largest)." :
+            "Values are actual centroid size measurements."
           }
         </div>
-
+        </div>
 
         {/* Centroid Size Filters */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
           {/* Below Filter */}
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
+            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
               Show below: 
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.below, true)}
+                onChange={(e) => handleManualInput('below', e.target.value)}
+                style={{ 
+                  width: "40px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "2px"
+                }}
+              />
+            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
                 min="0"
@@ -766,27 +775,27 @@ export default function WingCoordinates() {
                 onChange={(e) => setCentroidFilters(prev => ({ ...prev, below: +e.target.value }))}
                 style={{ flex: 1, height: "6px" }}
               />
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.below, true)}
-                onChange={(e) => handleManualInput('below', e.target.value)}
-                style={{ 
-                  width: "60px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-              />
             </div>
           </div>
 
           {/* Above Filter */}
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
+            <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
               And above: 
             </label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={formatDisplayValue(centroidFilters.above, false)}
+                onChange={(e) => handleManualInput('above', e.target.value)}
+                style={{ 
+                  width: "40px", 
+                  padding: "2px 4px", 
+                  fontSize: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "3px"
+                }}
+              />
+            <div style={{ display: "flex", marginTop: "5px", gap: "8px", alignItems: "center" }}>
               <input
                 type="range"
                 min="0"
@@ -800,24 +809,12 @@ export default function WingCoordinates() {
                   background: `linear-gradient(to right, #ddd ${centroidFilters.above * 100}%, #4CAF50 ${centroidFilters.above * 100}%)`
                 }}
               />
-              <input
-                type="text"
-                value={formatDisplayValue(centroidFilters.above, false)}
-                onChange={(e) => handleManualInput('above', e.target.value)}
-                style={{ 
-                  width: "60px", 
-                  padding: "2px 4px", 
-                  fontSize: "11px",
-                  border: "1px solid #ccc",
-                  borderRadius: "3px"
-                }}
-              />
             </div>
           </div>
 
           {/* Within Filter - Dual range slider */}
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "11px" }}>
+            <label style={{ fontWeight: "bold", display: "block", marginBottom: "4px", fontSize: "12px" }}>
               Within: {formatDisplayValue(centroidFilters.within[0])} - {formatDisplayValue(centroidFilters.within[1])}
             </label>
             <div style={{ position: "relative", height: "25px" }}>
@@ -915,13 +912,13 @@ export default function WingCoordinates() {
                 style={{ 
                   width: "70px", 
                   padding: "2px 4px", 
-                  fontSize: "11px",
+                  fontSize: "12px",
                   border: "1px solid #ccc",
                   borderRadius: "3px"
                 }}
                 placeholder="Min"
               />
-              <span style={{ fontSize: "11px", lineHeight: "24px" }}>to</span>
+              <span style={{ fontSize: "12px", lineHeight: "24px" }}>to</span>
               <input
                 type="text"
                 value={formatDisplayValue(centroidFilters.within[1])}
@@ -929,7 +926,7 @@ export default function WingCoordinates() {
                 style={{ 
                   width: "70px", 
                   padding: "2px 4px", 
-                  fontSize: "11px",
+                  fontSize: "12px",
                   border: "1px solid #ccc",
                   borderRadius: "3px"
                 }}
@@ -990,7 +987,7 @@ export default function WingCoordinates() {
                 border: "none",
                 borderRadius: "3px",
                 cursor: "pointer",
-                fontSize: "11px"
+                fontSize: "12px"
               }}
             >
               Clear All
