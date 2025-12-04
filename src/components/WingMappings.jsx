@@ -754,7 +754,12 @@ prevFocusLetterRef.current = focusLetter;
         .style("opacity", visibleConditions[condition] ? 1 : 0.5)
         .text(condition);
     });
-
+    mainGroup.append("text")
+      .attr("x", 10)
+      .attr("y", 20)
+      .style("font-size", "14px")
+      .style("fill", "#000")
+      .text("Click any point to map the whole wing.");
     return () => {
       tooltip.remove();
     };
