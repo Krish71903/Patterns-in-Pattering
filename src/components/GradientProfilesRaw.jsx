@@ -29,13 +29,12 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
   });
   const [dimensions, setDimensions] = useState({ width: 500, height: 400 });
 
-  // Handle responsive sizing
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = containerWidth * 0.95; // Use 95% of container width
-        const height = width * 0.85; // Increased aspect ratio for taller plots
+        const width = containerWidth * 0.95;
+        const height = width * 0.85; 
         setDimensions({ width, height });
       }
     };
@@ -50,7 +49,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
     };
   }, []);
 
-  // Load & preprocess
   useEffect(() => {
     d3.csv(mergedRawGradCSV)
       .then((raw) => {
@@ -129,7 +127,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("y1", (d) => yScale(d))
       .attr("y2", (d) => yScale(d));
 
-    // axes
     mainGroup
       .append("g")
       .attr("transform", `translate(0,${margin.top + plotHeight})`)
@@ -144,7 +141,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .selectAll("text")
       .style("font-size", "10px");
 
-    // labels
     mainGroup
       .append("text")
       .attr("x", margin.left + plotWidth / 2)
@@ -187,7 +183,6 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       selectedDiscIDs && selectedDiscIDs.length > 0;
     const selectedSet = new Set(selectedDiscIDs);
 
-    // --- Background curves (all visible) ---
     mainGroup
       .selectAll("path.curve-bg")
       .data(visibleCurves)
@@ -197,9 +192,8 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
       .attr("fill", "none")
       .attr("stroke", (d) => colors[d[0].condition] || "#999")
       .attr("stroke-width", 1)
-      .attr("opacity", haveSelection ? 0.1 : 0.25); // Q2: keep faint background
+      .attr("opacity", haveSelection ? 0.1 : 0.25);
 
-    // --- Selected curves (bold) ---
     if (haveSelection) {
       const selectedCurves = visibleCurves.filter((curve) =>
         selectedSet.has(curve[0].disc)
@@ -217,7 +211,7 @@ export default function GradientProfilesRaw({ selectedDiscIDs = [] }) {
         .attr("opacity", 0.9);
     }
 
-    // legend
+
     const legendX = margin.left + 87;
     const legendY = margin.top + plotHeight - 45;
 

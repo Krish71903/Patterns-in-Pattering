@@ -18,12 +18,10 @@ function mapCondition(raw) {
   return "standard";
 }
 
-// Gaussian function: y = B * exp(-((x-C)²)/(2*D²))
 function gaussianFunction(x, A, B, C, D) {
   return A + (1 - A) * Math.exp(-((x - C) ** 2) / (2 * D ** 2));
 }
 
-// Generate points for the Gaussian curve
 function generateGaussianCurve(A, B, C, D, xRange = [-50, 50], numPoints = 200) {
   const points = [];
   const step = (xRange[1] - xRange[0]) / (numPoints - 1);
@@ -48,13 +46,12 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
   });
   const [dimensions, setDimensions] = useState({ width: 500, height: 400 });
 
-  // Handle responsive sizing
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const width = containerWidth * 0.95; // Use 95% of container width
-        const height = width * 0.85; // Increased aspect ratio for taller plots
+        const width = containerWidth * 0.95;
+        const height = width * 0.85; 
         setDimensions({ width, height });
       }
     };
@@ -69,7 +66,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
     };
   }, []);
 
-  // Load & preprocess
   useEffect(() => {
     d3.csv(mergedNormalizedGradCSV)
       .then((raw) => {
@@ -80,17 +76,13 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
           const condLabel = mapCondition(row.condition);
           const area = +row.area;
           
-          // Parse the Gaussian parameters
           const A = +row.A;
           const B = +row.B;
           const C = +row.C;
           const D = +row.D;
           
-          // Skip if any parameter is invalid
           if ([A, B, C, D].some(isNaN)) return;
           
-          // Generate the Gaussian curve points
-          // Using x-range based on C ± 3*D to capture most of the curve
           const xMin = C - 3 * Math.abs(D);
           const xMax = C + 3 * Math.abs(D);
           const xRange = [Math.min(xMin, -50), Math.max(xMax, 50)];
@@ -100,7 +92,7 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
               disc: discId,
               condition: condLabel,
               area,
-              A, B, C, D, // Store parameters for reference
+              A, B, C, D,
               x: point.x,
               y: point.y
             }));
@@ -133,11 +125,9 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
 
     const mainGroup = svg.append("g");
 
-    // Calculate x and y extents from all curves
     const allPoints = curves.flat();
     const xExtent = d3.extent(allPoints, (d) => d.x);
-    const yExtent = [0, d3.max(allPoints, (d) => d.y) * 1.1]; // Add 10% padding on top
-
+    const yExtent = [0, d3.max(allPoints, (d) => d.y) * 1.1]; 
     const xScale = d3
       .scaleLinear()
       .domain(xExtent)
@@ -149,7 +139,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .domain([0, 1])
       .range([margin.top + plotHeight, margin.top]);
 
-    // Grid lines
     mainGroup
       .append("g")
       .attr("stroke", "#fff")
@@ -162,7 +151,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .attr("y1", (d) => yScale(d))
       .attr("y2", (d) => yScale(d));
 
-    // Axes
     mainGroup
       .append("g")
       .attr("transform", `translate(0,${margin.top + plotHeight})`)
@@ -177,7 +165,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .selectAll("text")
       .style("font-size", "10px");
 
-    // Axis labels
     mainGroup
       .append("text")
       .attr("x", margin.left + plotWidth / 2)
@@ -210,7 +197,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       visibleConditions[curve[0].condition]
     );
 
-    // Line generator for Gaussian curves
     const lineGen = d3
       .line()
       .x((d) => xScale(d.x - d.C)) 
@@ -221,7 +207,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       selectedDiscIDs && selectedDiscIDs.length > 0;
     const selectedSet = new Set(selectedDiscIDs);
 
-    // Background curves (all visible)
     mainGroup
       .selectAll("path.curve-bg")
       .data(visibleCurves)
@@ -233,7 +218,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
       .attr("stroke-width", 1)
       .attr("opacity", haveSelection ? 0.1 : 0.25);
 
-    // Selected curves (bold)
     if (haveSelection) {
       const selectedCurves = visibleCurves.filter((curve) =>
         selectedSet.has(curve[0].disc)
@@ -251,7 +235,6 @@ export default function GradientProfilesNormalized({ selectedDiscIDs = [] }) {
         .attr("opacity", 0.9);
     }
 
-    // Legend
     const legendX = margin.left + 87;
     const legendY = margin.top + plotHeight - 45;
 
