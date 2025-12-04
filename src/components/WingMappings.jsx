@@ -543,23 +543,16 @@ svg.call(zoom.transform, transform);
         });
       }
     } else if (!focusLetter && prevFocusLetterRef.current !== "") {
-      // Reset zoom to default view only when "All landmarks (reset zoom)" is explicitly selected
-      // (i.e., when changing from a letter to empty, not when already on empty)
-      // Reset both position and zoom scale to default (same as page refresh)
       svg
         .transition()
         .duration(50)
         .call(zoom.transform, d3.zoomIdentity);
-      // Also update the transform state to ensure it's synced
       setTransform(d3.zoomIdentity);
-      // Clear auto-zoom state when reset to all letters
       setAutoZoomedLetter("");
     }
     
-    // Update the ref to track the previous focusLetter value
     prevFocusLetterRef.current = focusLetter;
 
-    // Axes
     mainGroup.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(zoomedXScale).ticks(6))
@@ -572,7 +565,6 @@ svg.call(zoom.transform, transform);
       .selectAll("text")
       .style("font-size", "8px");
 
-    // Labels
     mainGroup.append("text")
       .attr("x", width / 2)
       .attr("y", height + 2)
@@ -588,7 +580,6 @@ svg.call(zoom.transform, transform);
       .style("font-size", "10px")
       .text("Y Coordinate");
 
-    // Gradients
     const defs = svg.append("defs");
     Object.keys(gradientScales).forEach(condition => {
       const gradientId = `gradient-${condition}`;
@@ -607,7 +598,6 @@ svg.call(zoom.transform, transform);
         .attr("stop-color", d => d.color);
     });
 
-    // Connections for selected wings
     Array.from(selectedIds).forEach(selectedId => {
       const selectedWingData = filteredData.filter(d => d.id === selectedId);
       const pointMap = {};
@@ -630,7 +620,6 @@ svg.call(zoom.transform, transform);
       });
     });
 
-    // Tooltip
     const tooltip = d3.select("body").append("div")
       .attr("class", "tooltip")
       .style("position", "absolute")
@@ -642,7 +631,6 @@ svg.call(zoom.transform, transform);
       .style("font-size", "12px")
       .style("opacity", 0);
 
-    // Draw points
     const points = mainGroup.selectAll("g.point")
       .data(filteredData)
       .join("g")
@@ -713,7 +701,6 @@ svg.call(zoom.transform, transform);
       .style("pointer-events", "none")
       .text(d => d.letter);
 
-    // Legend
     const legendX = 60;
     const legendY = margin.top + 25;
     mainGroup.append("text")
@@ -771,7 +758,7 @@ svg.call(zoom.transform, transform);
     <div style={{ padding: "8px", backgroundColor: "#fff" }}>
       <h2>Wing Coordinate Landmarks</h2>
       
-      {/* Filter Controls */}
+
       <div style={{ 
         marginBottom: "10px", 
         padding: "10px", 
@@ -779,7 +766,7 @@ svg.call(zoom.transform, transform);
         borderRadius: "5px",
         border: "1px solid #dee2e6"
       }}>
-        {/* Auto-zoom to letter cluster */}
+        
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
           <label style={{ fontWeight: "bold", fontSize: "12px" }}>Zoom to:</label>
           <select
@@ -807,7 +794,7 @@ svg.call(zoom.transform, transform);
             Choose a landmark letter to zoom in on all points of that tag.
           </span>
   
-  {/* Add these zoom buttons */}
+
   <div style={{ display: "flex", gap: "4px", marginLeft: "auto" }}>
     <button
       onClick={handleZoomOut}
@@ -842,7 +829,7 @@ svg.call(zoom.transform, transform);
   </div>
         </div>
         
-        {/* Sex Filter */}
+
         <div style={{ marginBottom: "10px" }}>
           <label style={{ fontWeight: "bold", marginRight: "10px", fontSize: "12px" }}>Sex:</label>
           {['female', 'male'].map(sex => (
@@ -858,7 +845,7 @@ svg.call(zoom.transform, transform);
           ))}
         </div>
         
-        {/* Filter Mode Toggle */}
+
         <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "15px" }}>
           <label style={{ fontWeight: "bold", fontSize: "12px" }}>Filter size by:</label>
           <div style={{ display: "flex", gap: "10px" }}>
@@ -891,7 +878,7 @@ svg.call(zoom.transform, transform);
           </div>
         </div>
 
-        {/* Centroid Size Filters */}
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
 {/* Below Filter */}
 <div>
@@ -940,7 +927,7 @@ svg.call(zoom.transform, transform);
           zIndex: 2
         }}
       />
-      {/* Custom track */}
+
       <div style={{
         position: "absolute",
         top: "50%",
@@ -951,7 +938,7 @@ svg.call(zoom.transform, transform);
         transform: "translateY(-50%)",
         borderRadius: "2px"
       }}></div>
-      {/* Filled portion */}
+
       <div style={{
         position: "absolute",
         top: "50%",
@@ -966,7 +953,7 @@ svg.call(zoom.transform, transform);
   </div>
 </div>
 
-{/* Above Filter */}
+
 <div>
   <label style={{ fontWeight: "bold", marginBottom: "4px", marginRight: "4px", fontSize: "12px" }}>
     And above: 
@@ -1013,7 +1000,7 @@ svg.call(zoom.transform, transform);
           zIndex: 2
         }}
       />
-      {/* Custom track */}
+
       <div style={{
         position: "absolute",
         top: "50%",
@@ -1024,7 +1011,7 @@ svg.call(zoom.transform, transform);
         transform: "translateY(-50%)",
         borderRadius: "2px"
       }}></div>
-      {/* Filled portion - to the RIGHT of the slider button */}
+
       <div style={{
         position: "absolute",
         top: "50%",
@@ -1039,7 +1026,7 @@ svg.call(zoom.transform, transform);
   </div>
 </div>
 
-          {/* Within Filter */}
+
           <div>
             <label style={{ fontWeight: "bold", marginBottom: "4px", fontSize: "12px" }}>
               Within:
