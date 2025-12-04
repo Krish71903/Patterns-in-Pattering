@@ -529,7 +529,7 @@ svg.call(zoom.transform, transform);
 
         const t = svg
           .transition()
-          .duration(200)
+          .duration(50)
           .call(
             zoom.transform,
             d3.zoomIdentity
@@ -543,19 +543,21 @@ svg.call(zoom.transform, transform);
         });
       }
     } else if (!focusLetter && prevFocusLetterRef.current !== "") {
-  // Reset zoom to default view when "All letters" is selected (only when changing from a letter to empty)
-  if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
-    svg
-      .transition()
-      .duration(200)
-      .call(zoom.transform, d3.zoomIdentity);
-  }
-  // Clear auto-zoom state when reset to all letters
-  setAutoZoomedLetter("");
-}
-
-// Update the ref to track the previous focusLetter value
-prevFocusLetterRef.current = focusLetter;
+      // Reset zoom to default view only when "All landmarks (reset zoom)" is explicitly selected
+      // (i.e., when changing from a letter to empty, not when already on empty)
+      // Reset both position and zoom scale to default (same as page refresh)
+      svg
+        .transition()
+        .duration(50)
+        .call(zoom.transform, d3.zoomIdentity);
+      // Also update the transform state to ensure it's synced
+      setTransform(d3.zoomIdentity);
+      // Clear auto-zoom state when reset to all letters
+      setAutoZoomedLetter("");
+    }
+    
+    // Update the ref to track the previous focusLetter value
+    prevFocusLetterRef.current = focusLetter;
 
     // Axes
     mainGroup.append("g")
