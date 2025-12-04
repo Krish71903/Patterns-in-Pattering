@@ -25,16 +25,14 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
   const [brushSelection, setBrushSelection] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 900 });
 
-  // Handle responsive sizing
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        // Account for side panel (150px) + gap (15px) + padding
         const sidePanelWidth = 165;
-        const availableWidth = containerWidth - sidePanelWidth - 20; // 20px for container padding
-        const width = Math.max(availableWidth * 0.9, 400); // Use 90% of available, min 400px
-        const height = width * 0.9; // Maintain aspect ratio
+        const availableWidth = containerWidth - sidePanelWidth - 20;
+        const width = Math.max(availableWidth * 0.9, 400);
+        const height = width * 0.9;
         setDimensions({ width, height });
       }
     };
@@ -42,7 +40,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     
-    // Small delay to ensure container is rendered
     const timeoutId = setTimeout(updateDimensions, 100);
     
     return () => {
@@ -51,7 +48,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     };
   }, []);
 
-  // Add CSS for brush styling - hide selection rectangle
   useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
@@ -78,19 +74,15 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     };
   }, []);
 
-  // ------------------------------------------------------------
-  // Load CSV data
-  // ------------------------------------------------------------
   useEffect(() => {
     d3.csv(mergedNormalizedGradCSV)
       .then((csvData) => {
         console.log("CSV loaded successfully!", csvData);
 
-        // Scatter data
         const processed = csvData
           .map((d) => ({
             disc: d.disc,
-            area: +d.area, // already log-transformed
+            area: +d.area,
             A: +d.A,
             B: +d.B,
             C: +d.C,
@@ -117,9 +109,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       });
   }, []);
 
-  // ------------------------------------------------------------
-  // Draw scatterplot, histograms, legend & brush
-  // ------------------------------------------------------------
   useEffect(() => {
     if (scatterData.length === 0 || !svgRef.current) return;
 
@@ -133,7 +122,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const histWidth = 36;
     const histHeight = 36;
 
-    // Create tooltip (ONCE at the top)
     let tooltip = d3.select("#wingdisc-tooltip");
     if (tooltip.empty()) {
       tooltip = d3
@@ -152,15 +140,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         .style("white-space", "nowrap");
     }
 
-    // Throttle tooltip position updates for better performance
     let lastTooltipUpdate = 0;
-    const tooltipUpdateThrottle = 16; // ~60fps
+    const tooltipUpdateThrottle = 16;
     
-    // Cache tooltip HTML to avoid regenerating on every mousemove
     let cachedTooltipHtml = null;
     let cachedDiscId = null;
-
-    // Filter data by visible conditions
     const filteredData = scatterData.filter(
       (d) => visibleConditions[d.condition]
     );
@@ -177,7 +161,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .nice()
       .range([scatterMargin.top + scatterSize, scatterMargin.top]);
 
-    // Axes
     mainGroup
       .append("g")
       .attr("transform", `translate(0,${scatterMargin.top + scatterSize})`)
@@ -192,7 +175,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .selectAll("text")
       .style("font-size", "10px");
 
-    // Labels
     mainGroup
       .append("text")
       .attr("x", scatterMargin.left + scatterSize / 2)
@@ -212,9 +194,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .style("font-weight", "bold")
       .text("Lambda");
 
-    // Title is now in the JSX return statement
-
-    // Shapes for conditions - slightly larger for better hover accuracy
     const symbolGenerator = d3.symbol().size(40);
     const shapeMap = {
       standard: d3.symbolCircle,
@@ -225,8 +204,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     const hasSelection = selectedDiscIDs.length > 0;
     const selectedSet = new Set(selectedDiscIDs);
 
-    // ------- 2D BRUSH (X and Y axes) -------
-    // Create brush FIRST so its overlay is on top and can capture all events
     const brushGroup = mainGroup.append("g").attr("class", "brush");
     
     const brush = d3
@@ -236,32 +213,25 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         [scatterMargin.left + scatterSize, scatterMargin.top + scatterSize]
       ])
       .on("start", (event) => {
-        // Prevent click events on scatter points when brushing starts
         if (event.sourceEvent) {
           event.sourceEvent.preventDefault();
           event.sourceEvent.stopPropagation();
         }
-        // Hide tooltip when brushing starts
         tooltip.style("opacity", 0);
-        // Completely disable hit area interactions during brushing
         hitAreaGroup.style("pointer-events", "none");
       })
       .on("brush", (event) => {
-        // Cancel any pending animation frame
         if (brushAnimationFrameRef.current) {
           cancelAnimationFrame(brushAnimationFrameRef.current);
         }
 
-        // Use requestAnimationFrame to throttle updates for smooth performance
         brushAnimationFrameRef.current = requestAnimationFrame(() => {
           const sel = event.selection;
           if (!sel) {
-            // Clear selection visually immediately
             if (scatterPointsRef.current) {
               scatterPointsRef.current
                 .attr("opacity", 0.7);
             }
-            // Update state to clear selection
             setSelectedDiscIDs([]);
             setBrushSelection(null);
             onSelectionChange([]);
@@ -269,17 +239,13 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           }
 
           const [[x0, y0], [x1, y1]] = sel;
-          // Ensure we get min/max correctly regardless of drag direction
           const areaMin = Math.min(xScale.invert(x0), xScale.invert(x1));
           const areaMax = Math.max(xScale.invert(x0), xScale.invert(x1));
-          // Y axis is inverted: top (smaller y screen coord) = larger D value
           const dMin = Math.min(yScale.invert(y0), yScale.invert(y1));
           const dMax = Math.max(yScale.invert(y0), yScale.invert(y1));
 
-          // Create Set for O(1) lookup performance
           const selectedSet = new Set();
           filteredData.forEach((d) => {
-            // Precise boundary checking with inclusive edges
             if (d.area >= areaMin && 
                 d.area <= areaMax &&
                 d.D >= dMin &&
@@ -288,7 +254,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
             }
           });
 
-          // Update visual opacity directly via D3 for instant feedback (no React re-render)
           if (scatterPointsRef.current) {
             scatterPointsRef.current
               .attr("opacity", (d) => {
@@ -296,7 +261,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
               });
           }
 
-          // Update React state only for final selection tracking
           const selected = Array.from(selectedSet);
           setSelectedDiscIDs(selected);
           setBrushSelection({
@@ -307,13 +271,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         });
       })
       .on("end", (event) => {
-        // Cancel any pending animation frame
         if (brushAnimationFrameRef.current) {
           cancelAnimationFrame(brushAnimationFrameRef.current);
           brushAnimationFrameRef.current = null;
         }
 
-        // Finalize selection update
         const sel = event.selection;
         if (!sel) {
           setSelectedDiscIDs([]);
@@ -321,15 +283,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
           onSelectionChange([]);
         }
         
-        // Re-enable hit area interactions after brush ends
         hitAreaGroup.style("pointer-events", "all");
       });
 
     brushGroup.call(brush);
 
-    // Scatter points with tooltip functionality
-    // Create invisible larger hit areas for better hover accuracy
-    // These are placed AFTER the brush so brush overlay is on top
     const hitAreaGroup = mainGroup.append("g").attr("class", "hit-areas");
     hitAreaGroup
       .selectAll("circle.hit-area")
@@ -338,13 +296,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .attr("class", "hit-area")
       .attr("cx", (d) => xScale(d.area))
       .attr("cy", (d) => yScale(d.D))
-      .attr("r", 8) // Larger hit area for easier hovering
+      .attr("r", 8)
       .attr("fill", "transparent")
       .attr("stroke", "none")
       .style("pointer-events", "all")
-      // hover: show tooltip on hit area
       .on("mouseover", function (event, d) {
-        // Only regenerate HTML if disc changed
         if (cachedDiscId !== d.disc) {
           cachedTooltipHtml = `Disc: ${d.disc}<br>Area: ${d.area.toFixed(2)}<br>Lambda: ${d.D.toFixed(2)}<br>Condition: ${d.condition}`;
           cachedDiscId = d.disc;
@@ -360,7 +316,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       })
       .on("mousemove", function(event) {
         const now = performance.now();
-        // Throttle position updates only, not content
         if (now - lastTooltipUpdate < tooltipUpdateThrottle) return;
         lastTooltipUpdate = now;
         
@@ -374,7 +329,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         cachedTooltipHtml = null;
       });
 
-    // Then create the visible scatter points
     scatterPointsRef.current = mainGroup
       .selectAll("path.scatter")
       .data(filteredData)
@@ -391,24 +345,23 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         if (!hasSelection) return 0.7;
         return selectedSet.has(d.disc) ? 0.9 : 0.15;
       })
-      .style("pointer-events", "none"); // Let hit area handle events
+      .style("pointer-events", "none");
 
-    // Restore brush selection if it exists
     if (brushSelection && brushSelection.area && brushSelection.d) {
       const [areaMin, areaMax] = brushSelection.area;
       const [dMin, dMax] = brushSelection.d;
       const x0 = xScale(areaMin);
       const x1 = xScale(areaMax);
-      const y0 = yScale(dMax); // dMax maps to top (smaller y screen coord)
-      const y1 = yScale(dMin); // dMin maps to bottom (larger y screen coord)
+      const y0 = yScale(dMax);
+      const y1 = yScale(dMin);
       
-      // Only restore if the selection is still valid
       if (isFinite(x0) && isFinite(x1) && isFinite(y0) && isFinite(y1)) {
         brush.move(brushGroup, [[x0, y0], [x1, y1]]);
       }
+    } else {
+      brush.move(brushGroup, null);
     }
 
-    // Hide brush handles and selection rectangle
     brushGroup.selectAll(".handle")
       .style("display", "none");
     
@@ -417,7 +370,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
       .attr("fill-opacity", 0)
       .attr("stroke", "none");
 
-    // Top histogram (by condition)
     Object.entries(colors).forEach(([condition, color]) => {
       if (!visibleConditions[condition]) return;
       const subset = filteredData.filter((d) => d.condition === condition);
@@ -451,7 +403,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         .attr("opacity", 0.4);
     });
 
-    // Right histogram (by D)
     Object.entries(colors).forEach(([condition, color]) => {
       if (!visibleConditions[condition]) return;
       const subset = filteredData.filter((d) => d.condition === condition);
@@ -488,7 +439,6 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
         .attr("opacity", 0.4);
     });
 
-    // Legend (conditions)
     const legendX = scatterMargin.left + scatterSize + 18;
     const legendY = scatterMargin.top - 39;
 
@@ -559,7 +509,38 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     dimensions
   ]);
 
-  // Cleanup animation frame on unmount
+  useEffect(() => {
+    if (!brushSelection || !brushSelection.area || !brushSelection.d || scatterData.length === 0) {
+      return;
+    }
+
+    const filteredData = scatterData.filter(
+      (d) => visibleConditions[d.condition]
+    );
+
+    const [areaMin, areaMax] = brushSelection.area;
+    const [dMin, dMax] = brushSelection.d;
+
+    const recalculatedSelectedSet = new Set();
+    filteredData.forEach((d) => {
+      if (d.area >= areaMin && 
+          d.area <= areaMax &&
+          d.D >= dMin &&
+          d.D <= dMax) {
+        recalculatedSelectedSet.add(d.disc);
+      }
+    });
+    
+    const recalculatedSelected = Array.from(recalculatedSelectedSet);
+    const currentKey = JSON.stringify([...recalculatedSelected].sort());
+    const previousKey = JSON.stringify([...selectedDiscIDs].sort());
+    
+    if (currentKey !== previousKey) {
+      setSelectedDiscIDs(recalculatedSelected);
+      onSelectionChange(recalculatedSelected);
+    }
+  }, [visibleConditions, brushSelection, scatterData]);
+
   useEffect(() => {
     return () => {
       if (brushAnimationFrameRef.current) {
@@ -568,15 +549,11 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
     };
   }, []);
 
-  // Format range display
   const formatRange = (range) => {
     if (!range) return null;
     return `${range[0].toFixed(2)} - ${range[1].toFixed(2)}`;
   };
 
-  // ------------------------------------------------------------
-  // Render
-  // ------------------------------------------------------------
   return (
     <div ref={containerRef} style={{ padding: "10px", backgroundColor: "#fff", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <h2 style={{ marginBottom: "10px", marginTop: "0" }}>Wing Disc Area vs Lambda</h2>
@@ -615,10 +592,35 @@ export default function WingDiscVsD({ onSelectionChange = () => {} }) {
               <strong>Area range:</strong><br />
               {brushSelection ? formatRange(brushSelection.area) : "—"}
             </div>
-            <div>
+            <div style={{ marginBottom: "8px" }}>
               <strong>D range:</strong><br />
               {brushSelection ? formatRange(brushSelection.d) : "—"}
             </div>
+            {brushSelection && (
+              <button
+                onClick={() => {
+                  setSelectedDiscIDs([]);
+                  setBrushSelection(null);
+                  onSelectionChange([]);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "6px 12px",
+                  backgroundColor: "#dc3545",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  marginTop: "8px"
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = "#c82333"}
+                onMouseOut={(e) => e.target.style.backgroundColor = "#dc3545"}
+              >
+                Clear Selection
+              </button>
+            )}
           </div>
           <div style={{ 
             padding: "8px 12px", 
